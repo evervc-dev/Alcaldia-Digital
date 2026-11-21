@@ -1,0 +1,39 @@
+# Topología — nodos, plantillas, enlaces y camino de energía
+
+Camino de energía: **A** = UPS A / circuito A; **B** = UPS B / circuito B; **AB** = doble fuente (sobrevive a la pérdida de un camino); **—** = fuera del alcance de la energía del sitio.
+`scripts/power-path.sh A off` apaga los nodos del camino A y desconecta la interfaz del camino A (eth0) de los nodos AB.
+
+## Internet simulado
+| Nodo | Plantilla | Interfaces |
+|---|---|---|
+| NAT | NAT (integrada) | → inet-core eth0 |
+| inet-core | ACC-Router | eth0 NAT, eth1 ISP1, eth2 ISP2, eth3 atacante-ext |
+| isp1 | ACC-Router (6 adaptadores) | eth0 core, eth1 wsw-a1 (WAN1 A), eth2 FW-B WAN1, eth3 sede 1, eth4 sede 3 |
+| isp2 | ACC-Router | eth0 core, eth1 wsw-a2 (WAN2 A), eth2 FW-B WAN2, eth3 sede 2 |
+| atacante-ext | ACC-PC | eth0 inet-core |
+
+## Site A (Tier II)
+| Nodo | Plantilla | Energía | Interfaces |
+|---|---|---|---|
+| wsw-a1, wsw-a2 | Ethernet switch (integrado) | — (lado del proveedor) | segmento WAN1 / WAN2 |
+| fw-a1 | ACC-OPNsense | A | vtnet0 WAN1, vtnet1 WAN2, vtnet2 → sw-a1, vtnet3 → sw-a2 (lagg failover), vtnet4 pfsync ↔ fw-a2 |
+| fw-a2 | ACC-OPNsense | B | igual que fw-a1 |
+| sw-a1 | ACC-OVS | A | trunk fw-a1/fw-a2, LACP ×2 ↔ sw-a2, eth0 de los servidores |
+| sw-a2 | ACC-OVS | B | trunk fw-a1/fw-a2, LACP ×2 ↔ sw-a1, eth1 de los servidores |
+| dc1, authelia, redis, portal, portal-db, archivo, nginx-dmz, cloudflared-a, zbx-db, zbx-server, zbx-web, mailpit, nas-a | varias | AB | bond0 active-backup (eth0 → sw-a1, eth1 → sw-a2) |
+
+## Site B (Tier I)
+| Nodo | Plantilla | Energía | Interfaces |
+|---|---|---|---|
+| fw-b | ACC-OPNsense | A | vtnet0 WAN1, vtnet1 WAN2, vtnet2 → sw-b1 |
+| sw-b1, sw-b2 | ACC-OVS | A | sw-b1 ↔ sw-b2 |
+| dc2, portal-db-b, portal-b*, archivo-b, nginx-dmz-b, cloudflared-b, nas-b, tape* | varias | A | eth0 (un solo enlace) |
+
+## Sedes (kit replicable)
+| Nodo | Plantilla | Interfaces |
+|---|---|---|
+| kit-sede-0N | ACC-Kit-Sede | eth0 WAN (CGNAT del ISP), eth1 LAN → sw-sede-0N |
+| sw-sede-0N | Ethernet switch (integrado) | kit, pc-0N-a, pc-0N-b |
+| pc-0N-a, pc-0N-b | ACC-PC | eth0 LAN (DHCP) |
+
+`*` = detenido (sitio tibio).

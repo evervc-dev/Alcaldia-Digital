@@ -1,0 +1,14 @@
+# Secretos locales
+.env
+*.secret
+configs/**/secret*
+# Imágenes y artefactos pesados
+*.qcow2
+*.img
+*.img.bz2
+*.iso
+*.gns3project
+downloads/
+# Varios
+__pycache__/
+*.log

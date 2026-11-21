@@ -1,0 +1,57 @@
+#!/bin/bash
+# Crea (de forma idempotente) las plantillas ACC-* en el servidor GNS3 v3 usando su API REST.
+# gns3-mcp no puede crear plantillas; este script es la única llamada directa a la API.
+# Requiere GNS3_URL, GNS3_USER y GNS3_PASS en .env
+set -euo pipefail
+cd "$(dirname "$0")/.."; set -a; . ./.env; set +a
+: "${GNS3_PASS:?Rellena GNS3_PASS en .env}"
+OPN_IMG=${OPN_IMG:-$(ls ~/GNS3/images/QEMU/ | grep -E '^opnsense-.*-nano\.qcow2$' | sort -V | tail -1 || true)}
+
+TOKEN=$(curl -fsS -X POST "$GNS3_URL/v3/access/users/authenticate" -H 'Content-Type: application/json' \
+  -d "$(python3 -c 'import json,os;print(json.dumps({"username":os.environ["GNS3_USER"],"password":os.environ["GNS3_PASS"]}))')" \
+  | python3 -c 'import sys,json;print(json.load(sys.stdin)["access_token"])')
+AUTH=(-H "Authorization: Bearer $TOKEN" -H 'Content-Type: application/json')
+EXISTING=$(curl -fsS "${AUTH[@]}" "$GNS3_URL/v3/templates" | python3 -c 'import sys,json;[print(t["name"]) for t in json.load(sys.stdin)]')
+
+TEMPLATES_JSON=$(curl -fsS "${AUTH[@]}" "$GNS3_URL/v3/templates")
+create() { # nombre json   (UPDATE=1 actualiza las que ya existen)
+  if grep -qxF "$1" <<<"$EXISTING"; then
+    if [ "${UPDATE:-0}" = 1 ]; then
+      id=$(python3 -c 'import json,sys;print(next(t["template_id"] for t in json.loads(sys.argv[1]) if t["name"]==sys.argv[2]))' "$TEMPLATES_JSON" "$1")
+      curl -fsS -X PUT "${AUTH[@]}" "$GNS3_URL/v3/templates/$id" -d "$2" >/dev/null && echo "~ $1 (actualizada)"
+    else echo "= $1 (ya existe)"; fi
+    return
+  fi
+  curl -fsS -X POST "${AUTH[@]}" "$GNS3_URL/v3/templates" -d "$2" >/dev/null && echo "+ $1"
+}
+docker_tpl() { # nombre imagen adaptadores consola categoria [env]
+  create "$1" "$(python3 - "$@" <<'PY'
+import json,sys
+n,img,ad,con,cat=sys.argv[1:6]; env=sys.argv[6] if len(sys.argv)>6 else ""
+print(json.dumps({"name":n,"template_type":"docker","image":img,"adapters":int(ad),
+ "console_type":con,"category":cat,"environment":env,"compute_id":"local"}))
+PY
+)"
+}
+
+docker_tpl ACC-Router        acc/router:1.0                     6  telnet router
+docker_tpl ACC-Kit-Sede      acc/kit-sede:1.0                   2  telnet firewall
+docker_tpl ACC-PC            acc/pc:1.0                         2  telnet guest
+docker_tpl ACC-OVS           gns3/openvswitch:latest           16  telnet switch
+docker_tpl ACC-Samba-DC      acc/samba-dc:1.0                   2  telnet guest
+docker_tpl ACC-Postgres      postgres:16-alpine                 2  telnet guest
+docker_tpl ACC-Nginx         nginx:1.27-alpine                  2  telnet guest
+docker_tpl ACC-Redis         redis:7-alpine                     2  telnet guest
+docker_tpl ACC-Authelia      authelia/authelia:4.39.28          2  telnet guest
+docker_tpl ACC-Filebrowser   filebrowser/filebrowser:v2.63.23   2  none   guest
+docker_tpl ACC-Cloudflared   cloudflare/cloudflared:2026.10.7   2  none   guest
+docker_tpl ACC-Zabbix-Server zabbix/zabbix-server-pgsql:alpine-7.0-latest     2 telnet guest
+docker_tpl ACC-Zabbix-Web    zabbix/zabbix-web-nginx-pgsql:alpine-7.0-latest  2 telnet guest
+docker_tpl ACC-Mailpit       axllent/mailpit:latest             2  none   guest
+docker_tpl ACC-MinIO         cgr.dev/chainguard/minio:latest    2  none   guest
+
+if [ -n "$OPN_IMG" ]; then
+  create ACC-OPNsense "$(python3 -c 'import json,sys;print(json.dumps({"name":"ACC-OPNsense","template_type":"qemu","compute_id":"local","platform":"x86_64","category":"firewall","hda_disk_image":sys.argv[1],"ram":1536,"cpus":1,"adapters":5,"adapter_type":"virtio-net-pci","hda_disk_interface":"sata","console_type":"telnet","options":"-cpu host","on_close":"shutdown_signal"}))' "$OPN_IMG")"
+else
+  echo "! No hay imagen OPNsense en ~/GNS3/images/QEMU (ejecuta get-opnsense.sh)"
+fi
