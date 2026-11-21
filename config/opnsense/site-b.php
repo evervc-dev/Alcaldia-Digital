@@ -8,6 +8,7 @@
 require_once('script/load_phalcon.php');
 use OPNsense\Core\Config;
 require_once(__DIR__ . '/wan-ab.inc.php');
+require_once(__DIR__ . '/dhcp.inc.php');
 
 $role = 'b';
 $VLANS = [ // tag => [ifname, descr]   (Site B no tiene VLAN 50 USUARIOS)
@@ -33,7 +34,6 @@ $cfg->system->ssh->enabled = 'enabled';
 $cfg->system->ssh->permitrootlogin = '1';
 $cfg->system->ssh->passwordauth = '1';
 unset($cfg->trigger_initial_wizard);
-if (isset($cfg->dnsmasq)) { $cfg->dnsmasq->enable = '0'; }   // DHCP se hará en F4
 
 /* ---------- interfaces (legacy) ---------- */
 unset($cfg->interfaces);
@@ -157,6 +157,9 @@ Config::getInstance()->save();
 $cfg = Config::getInstance()->object();
 if (!isset($cfg->nat->outbound)) { $cfg->nat->addChild('outbound'); }
 $cfg->nat->outbound->mode = 'hybrid';
+
+/* ---------- DHCP (RQ-13) ---------- */
+dhcp_apply(['opt4' => ['10.20.40', 100, 199]]);
 
 /* ---------- WAN A<->B (IPsec VTI + OSPF) ---------- */
 wan_ab_apply('b', '10.20.10.1', ['lan', 'opt2', 'opt3', 'opt4', 'opt6']);

@@ -1,0 +1,3 @@
+# usr-pc: equipo de la VLAN 50 (USUARIOS) — obtiene IP por DHCP (prueba RQ-13)
+auto eth0
+iface eth0 inet dhcp

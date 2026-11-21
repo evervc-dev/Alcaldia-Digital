@@ -8,6 +8,7 @@
 require_once('script/load_phalcon.php');
 use OPNsense\Core\Config;
 require_once(__DIR__ . '/wan-ab.inc.php');
+require_once(__DIR__ . '/dhcp.inc.php');
 
 $role = $argv[1] ?? '';
 if (!in_array($role, ['a1', 'a2'])) { fwrite(STDERR, "uso: php site-a.php a1|a2\n"); exit(1); }
@@ -41,7 +42,6 @@ $cfg->system->ssh->enabled = 'enabled';
 $cfg->system->ssh->permitrootlogin = '1';
 $cfg->system->ssh->passwordauth = '1';
 unset($cfg->trigger_initial_wizard);
-if (isset($cfg->dnsmasq)) { $cfg->dnsmasq->enable = '0'; }   // DHCP se hará en F4
 
 /* ---------- interfaces (legacy) ---------- */
 unset($cfg->interfaces);
@@ -156,9 +156,12 @@ $rule('opt2', 'block', 'SERVIDORES: resto bloqueado');
 wan_ab_rules($rule, 'a');
 $rule('opt3', 'pass', 'DMZ -> servicios publicados', ['destination_net' => 'opt2', 'protocol' => 'TCP', 'destination_port' => 'PUERTOS_PUBLICADOS']);
 $rule('opt3', 'pass', 'DMZ -> DNS interno', ['destination_net' => 'opt2', 'protocol' => 'TCP/UDP', 'destination_port' => '53']);
+$rule('opt3', 'pass', 'DMZ -> servidores Site B (DNS secundario / DR)', ['destination_net' => '10.20.20.0/24', 'protocol' => 'TCP/UDP', 'destination_port' => 'PUERTOS_PUBLICADOS']);
+$rule('opt3', 'pass', 'DMZ -> DNS Site B', ['destination_net' => '10.20.20.0/24', 'protocol' => 'TCP/UDP', 'destination_port' => '53']);
 $rule('opt3', 'pass', 'DMZ -> Internet (cloudflared)', ['destination_net' => '10.0.0.0/8', 'destination_not' => '1', 'log' => '0']);
 $rule('opt3', 'block', 'DMZ: resto bloqueado');
 $rule('opt5', 'pass', 'USUARIOS -> servicios web y DNS', ['destination_net' => 'opt2', 'protocol' => 'TCP/UDP', 'destination_port' => 'PUERTOS_WEB_DNS']);
+$rule('opt5', 'pass', 'USUARIOS -> servicios del Site B (DNS secundario / DR)', ['destination_net' => '10.20.20.0/24', 'protocol' => 'TCP/UDP', 'destination_port' => 'PUERTOS_WEB_DNS']);
 $rule('opt5', 'pass', 'USUARIOS -> Internet', ['destination_net' => '10.0.0.0/8', 'destination_not' => '1', 'log' => '0']);
 $rule('opt5', 'block', 'USUARIOS: resto bloqueado');
 $rule('opt6', 'pass', 'RESPALDO -> Internet/Site B', ['destination_net' => '10.10.0.0/16', 'destination_not' => '1', 'log' => '0']);
@@ -180,6 +183,10 @@ $cfg->nat->outbound->mode = 'hybrid';
 
 /* ---------- WAN A<->B (IPsec VTI + OSPF) ---------- */
 wan_ab_apply('a', $my99, ['lan', 'opt2', 'opt3', 'opt4', 'opt5', 'opt6']);
+
+/* ---------- DHCP (RQ-13): rango distinto por nodo CARP ---------- */
+[$i0, $i1] = $role === 'a1' ? [100, 149] : [150, 199];
+dhcp_apply(['opt4' => ['10.10.40', $i0, $i1], 'opt5' => ['10.10.50', $i0, $i1]]);
 
 /* ---------- HA: pfsync ---------- */
 $ha = new \OPNsense\Core\Hasync();

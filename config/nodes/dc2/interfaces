@@ -1,0 +1,8 @@
+# dc2: DC adicional + DNS secundario (Site B, SERVIDORES; Tier I = un enlace)
+auto eth0
+iface eth0 inet static
+	address 10.20.20.10
+	netmask 255.255.255.0
+	gateway 10.20.20.1
+	up printf 'search ad.alcaldia.lab\nnameserver 10.10.20.10\nnameserver 127.0.0.1\n' > /etc/resolv.conf
+	up grep -q dc2.ad.alcaldia.lab /etc/hosts || echo "10.20.20.10 dc2.ad.alcaldia.lab dc2" >> /etc/hosts

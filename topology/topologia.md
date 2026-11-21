@@ -20,6 +20,8 @@ Camino de energía: **A** = UPS A / circuito A; **B** = UPS B / circuito B; **AB
 | fw-a2 | ACC-OPNsense | B | igual, pero vtnet2 trunk → sw-a2 eth1 |
 | sw-a1 | ACC-OVS | A | eth1 trunk fw-a1, eth14+eth15 LACP ↔ sw-a2, eth3 adm-pc, eth4–13 eth0 de los servidores, mgmt 10.10.10.11 |
 | sw-a2 | ACC-OVS | B | eth1 trunk fw-a2, eth14+eth15 LACP ↔ sw-a1, eth3 adm-pc, eth4–13 eth1 de los servidores, mgmt 10.10.10.12 |
+| dc1 | ACC-Samba-DC | AB | bond0 (eth0 → sw-a1 eth4, eth1 → sw-a2 eth4), VLAN 20, 10.10.20.10 |
+| usr-pc | ACC-PC | A | eth0 → sw-a1 eth5, VLAN 50, DHCP |
 | adm-pc | ACC-PC | AB | bond0 (eth0 → sw-a1 eth3, eth1 → sw-a2 eth3), VLAN 40, 10.10.40.50 |
 | dc1, authelia, redis, portal, portal-db, archivo, nginx-dmz, cloudflared-a, zbx-db, zbx-server, zbx-web, mailpit, nas-a | varias | AB | bond0 active-backup (eth0 → sw-a1, eth1 → sw-a2) |
 
@@ -28,7 +30,9 @@ Camino de energía: **A** = UPS A / circuito A; **B** = UPS B / circuito B; **AB
 |---|---|---|---|
 | fw-b | ACC-OPNsense | A | vtnet0 WAN1, vtnet1 WAN2, vtnet2 → sw-b1 |
 | sw-b1, sw-b2 | ACC-OVS | A | sw-b1 ↔ sw-b2 |
-| dc2, portal-db-b, portal-b*, archivo-b, nginx-dmz-b, cloudflared-b, nas-b, tape* | varias | A | eth0 (un solo enlace) |
+| dc2 | ACC-Samba-DC | A | eth0 → sw-b1 eth4, VLAN 20, 10.20.20.10 |
+| adm-pc-b | ACC-PC | A | eth0 → sw-b1 eth3, VLAN 40, 10.20.40.50 |
+| portal-db-b, portal-b*, archivo-b, nginx-dmz-b, cloudflared-b, nas-b, tape* | varias | A | eth0 (un solo enlace) |
 
 ## Sedes (kit replicable)
 | Nodo | Plantilla | Interfaces |
