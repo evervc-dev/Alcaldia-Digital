@@ -11,17 +11,16 @@ TRAMITES = ["Constancia de residencia", "Solvencia municipal", "Permiso de const
 SEDES = ["Sede 1", "Sede 2", "Sede 3"]
 app = FastAPI(title="Portal de trámites")
 
+_ready = False
 def db():
-    return psycopg.connect(DB, connect_timeout=5, autocommit=True)
-
-@app.on_event("startup")
-def init():
-    try:
-        with db() as c:
-            c.execute("""CREATE TABLE IF NOT EXISTS tramites(folio text PRIMARY KEY, creado timestamptz DEFAULT now(),
-                nombre text, documento text, tramite text, sede text, estado text DEFAULT 'Recibido', atendido_por text)""")
-    except Exception as e:
-        print("BD no disponible al iniciar:", e, flush=True)
+    """Conexión a la BD; crea el esquema en la primera conexión correcta (la BD puede arrancar después que el portal)."""
+    global _ready
+    c = psycopg.connect(DB, connect_timeout=5, autocommit=True)
+    if not _ready:
+        c.execute("""CREATE TABLE IF NOT EXISTS tramites(folio text PRIMARY KEY, creado timestamptz DEFAULT now(),
+            nombre text, documento text, tramite text, sede text, estado text DEFAULT 'Recibido', atendido_por text)""")
+        _ready = True
+    return c
 
 def page(title, body):
     return HTMLResponse(f"""<!doctype html><html lang="es"><meta charset="utf-8"><meta name="viewport" content="width=device-width">

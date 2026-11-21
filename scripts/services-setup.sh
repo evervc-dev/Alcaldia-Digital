@@ -10,6 +10,7 @@ printf "POSTGRES_USER='portal'\nPOSTGRES_PASSWORD='%s'\nPOSTGRES_DB='portal'\nPG
 printf "DATABASE_URL='postgresql://portal:%s@%s/portal'\nPORTAL_SITE='Site %s'\n" "$PORTAL_DB_PASS" "$DBIP" "$SITE" | put portal$SFX /etc/acc/portal.env
 TOK_VAR="CF_TUNNEL_TOKEN_$SITE"; printf '%s' "${!TOK_VAR}" | put cloudflared-$(echo $SITE | tr A-Z a-z) /etc/acc/tunnel.token
 if [ "$SITE" = A ]; then
+  put gate /etc/acc/horario.conf < config/politicas/horario.conf
   printf "LDAP_BIND_DN='svc-lectura@ad.alcaldia.lab'\nLDAP_BIND_PW='%s'\n" "$SVC_LDAP_PASS" | sed "s/'//g" | put gate /etc/acc/gate.env
   python3 - <<'PY' | put authelia /config/configuration.yml
 import os,re,sys

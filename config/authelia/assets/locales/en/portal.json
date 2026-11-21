@@ -1,4 +1,4 @@
 {
-  "Incorrect username or password": "Credenciales incorrectas o acceso fuera del horario laboral (lunes a viernes, 8:00 a 16:00). Si su contraseña es correcta, intente dentro del horario o contacte a la Mesa de Servicio.",
-  "Incorrect username or password.": "Credenciales incorrectas o acceso fuera del horario laboral (lunes a viernes, 8:00 a 16:00). Si su contraseña es correcta, intente dentro del horario o contacte a la Mesa de Servicio."
+  "Incorrect username or password": "Usuario o contraseña incorrectos.",
+  "Incorrect username or password.": "Usuario o contraseña incorrectos."
 }

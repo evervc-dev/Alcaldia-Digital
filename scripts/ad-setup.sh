@@ -1,6 +1,7 @@
 #!/bin/bash
 # Grupos, cuenta de servicio, usuarios de demostración y horario (logonHours) en el AD. Idempotente.
-# Horario de 'funcionarios': lun-vie 8:00-16:00 hora de El Salvador (UTC-6) = 14:00-22:00 UTC.
+# Horario: política por GRUPO (config/politicas/horario.conf), aplicada en ts1 y horario-gate con mensaje explícito.
+# Se decidió NO usar logonHours: el DC rechaza antes de abrir sesión y ni xrdp ni Authelia pueden mostrar el motivo.
 # Uso: ad-setup.sh                    -> base completa
 #      ad-setup.sh usuario <u> <grupo> "<Nombre Apellido>"   -> alta/actualización de un usuario
 set -euo pipefail; cd "$(dirname "$0")/.."; set -a; . ./.env; set +a
@@ -14,8 +15,8 @@ for d in range(1,6):
   for h in range(14,22):
     i=d*24+h; b[i//8]|=1<<(i%8)
 import base64; print(base64.b64encode(bytes(b)).decode())')
-horario() { # usuario
-  dcx "dn=\$(ldbsearch -H /var/lib/samba/private/sam.ldb \"(sAMAccountName=$1)\" dn | sed -n 's/^dn: //p'); printf 'dn: %s\nchangetype: modify\nreplace: logonHours\nlogonHours:: %s\n' \"\$dn\" '$LH' | ldbmodify -H /var/lib/samba/private/sam.ldb >/dev/null && echo '  horario lun-vie 8-16 -> $1'"
+horario() { # usuario: elimina logonHours si existiera (el horario lo aplica la política por grupo)
+  dcx "dn=\$(ldbsearch -H /var/lib/samba/private/sam.ldb \"(sAMAccountName=$1)\" dn | sed -n 's/^dn: //p'); printf 'dn: %s\nchangetype: modify\ndelete: logonHours\n' \"\$dn\" | ldbmodify -H /var/lib/samba/private/sam.ldb >/dev/null 2>&1; echo '  $1: sin logonHours (horario por política de grupo)'"
 }
 usuario() { # usuario grupo "Nombre Apellido"
   read -r gn sn <<<"$3"

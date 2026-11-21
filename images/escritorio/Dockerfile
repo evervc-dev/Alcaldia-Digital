@@ -5,7 +5,7 @@ ENV DEBIAN_FRONTEND=noninteractive LANG=es_ES.UTF-8
 RUN apt-get update && apt-get install -y --no-install-recommends \
       xfce4-session xfwm4 xfce4-panel xfdesktop4 xfce4-terminal xfce4-settings thunar mousepad \
       dbus-x11 xrdp xorgxrdp winbind libnss-winbind libpam-winbind krb5-user samba-common-bin \
-      firefox-esr fonts-dejavu locales iproute2 iputils-ping procps ldap-utils ca-certificates \
+      firefox-esr fonts-dejavu locales zenity iproute2 iputils-ping procps ldap-utils ca-certificates \
  && sed -i 's/^# *es_ES.UTF-8/es_ES.UTF-8/' /etc/locale.gen && locale-gen \
  && rm -rf /var/lib/apt/lists/* \
  && pam-auth-update --enable winbind --enable mkhomedir \

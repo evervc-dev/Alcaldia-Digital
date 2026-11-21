@@ -4,7 +4,7 @@ GET /authz  (nginx auth_request) -> consulta a Authelia (sesión + MFA); si es v
             Devuelve 200 (+cabeceras Remote-*), 401/302 de Authelia tal cual, o 403 si está fuera de horario.
 GET /check  (cabecera Remote-User puesta por Authelia)  -> 200 permitido | 403 fuera de horario
 GET /denegado?u=<usuario>                             -> página HTML con el motivo
-Regla: miembros de 'acceso-24h' siempre; resto según su atributo logonHours (168 bits, hora UTC, desde domingo 00:00).
+Regla (config/politicas/horario.conf -> /etc/acc/horario.conf): GRUPO_RESTRINGIDO solo en DIAS/DESDE-HASTA; GRUPO_EXENTO siempre.
 Configuración por variables de entorno: LDAP_URL, LDAP_BIND_DN, LDAP_BIND_PW (leída de /etc/acc/gate.env), LDAP_BASE."""
 import os, ssl, html, datetime, http.server, urllib.parse, urllib.request, urllib.error, ldap3
 
@@ -17,25 +17,37 @@ load_env()
 URLS = os.environ.get("LDAP_URL", "ldaps://10.10.20.10,ldaps://10.20.20.10").split(",")
 BASE = os.environ.get("LDAP_BASE", "DC=ad,DC=alcaldia,DC=lab")
 AUTHELIA = os.environ.get("AUTHELIA_URL", "http://10.10.20.11:9091")
-TZ_LOCAL = datetime.timezone(datetime.timedelta(hours=-6))   # El Salvador, sin horario de verano
+TZ_LOCAL = datetime.timezone(datetime.timedelta(hours=-6))   # El Salvador, sin horario de verano (solo para la página)
 
-def lookup(user):
+def politica():
+    p = {"GRUPO_RESTRINGIDO": "funcionarios", "GRUPO_EXENTO": "acceso-24h", "DIAS": "1,2,3,4,5",
+         "DESDE": "08:00", "HASTA": "16:00", "TZ_OFFSET": "-6"}
+    if os.path.exists("/etc/acc/horario.conf"):
+        for line in open("/etc/acc/horario.conf"):
+            line = line.split("#")[0].strip()
+            if "=" in line: k, v = line.split("=", 1); p[k.strip()] = v.strip()
+    return p
+
+def groups_of(user):
     pool = ldap3.ServerPool([ldap3.Server(u, connect_timeout=3, get_info=ldap3.NONE, tls=ldap3.Tls(validate=ssl.CERT_NONE)) for u in URLS], ldap3.FIRST, active=1)
     c = ldap3.Connection(pool, os.environ["LDAP_BIND_DN"], os.environ["LDAP_BIND_PW"], auto_bind=True)
-    c.search(BASE, f"(sAMAccountName={ldap3.utils.conv.escape_filter_chars(user)})", attributes=["logonHours", "memberOf"])
-    if not c.entries: return None, []
+    c.search(BASE, f"(sAMAccountName={ldap3.utils.conv.escape_filter_chars(user)})", attributes=["memberOf"])
+    if not c.entries: return []
     e = c.entries[0]
-    lh = e.logonHours.raw_values[0] if e.logonHours.raw_values else None
-    groups = [g.split(",")[0][3:].lower() for g in e.memberOf.values] if e.memberOf else []
-    return lh, groups
+    return [g.split(",")[0][3:].lower() for g in e.memberOf.values] if e.memberOf else []
+
+def dentro_horario(p):
+    tz = datetime.timezone(datetime.timedelta(hours=int(p["TZ_OFFSET"])))
+    now = datetime.datetime.now(tz)
+    dias = {int(d) for d in p["DIAS"].split(",") if d.strip()}
+    hm = now.strftime("%H:%M")
+    return now.isoweekday() in dias and p["DESDE"] <= hm < p["HASTA"]
 
 def allowed(user):
-    lh, groups = lookup(user)
-    if "acceso-24h" in groups: return True, "acceso-24h"
-    if lh is None: return True, "sin restricción de horario"
-    now = datetime.datetime.now(datetime.timezone.utc)
-    bit = ((now.weekday() + 1) % 7) * 24 + now.hour          # domingo = 0
-    return bool(lh[bit // 8] & (1 << (bit % 8))), "logonHours"
+    p = politica(); groups = groups_of(user)
+    if p["GRUPO_EXENTO"].lower() in groups: return True, p["GRUPO_EXENTO"]
+    if p["GRUPO_RESTRINGIDO"].lower() not in groups: return True, "sin restricción de horario"
+    return dentro_horario(p), f"{p['GRUPO_RESTRINGIDO']} {p['DESDE']}-{p['HASTA']} días {p['DIAS']}"
 
 PAGE = """<!doctype html><html lang="es"><meta charset="utf-8"><title>Fuera del horario laboral</title>
 <body style="font-family:sans-serif;max-width:640px;margin:4rem auto;line-height:1.5">
