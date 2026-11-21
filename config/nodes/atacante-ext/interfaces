@@ -1,0 +1,7 @@
+# atacante-ext: host cualquiera de Internet (198.18.0.0/24)
+auto eth0
+iface eth0 inet static
+	address 198.18.0.66
+	netmask 255.255.255.0
+	gateway 198.18.0.1
+	up printf 'nameserver 1.1.1.1\nnameserver 8.8.8.8\n' > /etc/resolv.conf

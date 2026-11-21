@@ -1,0 +1,22 @@
+# isp1: proveedor 1 (AS65001), bloque público 203.0.113.0/24
+auto eth0
+iface eth0 inet static
+	address 192.0.2.2
+	netmask 255.255.255.252
+	up printf 'nameserver 1.1.1.1\nnameserver 8.8.8.8\n' > /etc/resolv.conf
+auto eth1
+iface eth1 inet static
+	address 203.0.113.1
+	netmask 255.255.255.248
+auto eth2
+iface eth2 inet static
+	address 203.0.113.9
+	netmask 255.255.255.252
+auto eth3
+iface eth3 inet static
+	address 100.64.1.1
+	netmask 255.255.255.252
+auto eth4
+iface eth4 inet static
+	address 100.64.3.1
+	netmask 255.255.255.252

@@ -1,0 +1,8 @@
+# isp1: CGNAT de las sedes (100.64.0.0/10 -> 203.0.113.254); los clientes no reciben conexiones entrantes
+flush ruleset
+table ip nat {
+  chain postrouting {
+    type nat hook postrouting priority 100;
+    ip saddr 100.64.0.0/10 oifname != "eth3" oifname != "eth4" snat to 203.0.113.254
+  }
+}

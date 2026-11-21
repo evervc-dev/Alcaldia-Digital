@@ -1,0 +1,19 @@
+# inet-core: "Internet" simulado (AS65000). eth0 -> NAT de GNS3 (salida real)
+auto eth0
+iface eth0 inet static
+	address 192.168.122.10
+	netmask 255.255.255.0
+	gateway 192.168.122.1
+	up printf 'nameserver 1.1.1.1\nnameserver 8.8.8.8\n' > /etc/resolv.conf
+auto eth1
+iface eth1 inet static
+	address 192.0.2.1
+	netmask 255.255.255.252
+auto eth2
+iface eth2 inet static
+	address 192.0.2.5
+	netmask 255.255.255.252
+auto eth3
+iface eth3 inet static
+	address 198.18.0.1
+	netmask 255.255.255.0

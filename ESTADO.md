@@ -2,18 +2,18 @@
 
 | Campo | Valor |
 |---|---|
-| Fase actual | **F0 ✅ terminada** → siguiente: **F1 Internet simulado** |
+| Fase actual | **F1 ✅ terminada** → siguiente: **F2 Red Site A** |
 | Última actualización | 2026-11-21 ~12:10 (hora local) |
 | Plazo | 48 h → 2026-11-23 |
-| Proyectos GNS3 abiertos | ninguno (`ACC-Canario` borrado tras la prueba) |
-| Nodos encendidos | ninguno |
+| Proyectos GNS3 abiertos | `ACC-Lab` (id 88f8f32e-4b4f-4e25-9a8b-ac0c9c71c5f9) |
+| Nodos encendidos | internet-real (NAT), inet-core, isp1, isp2, atacante-ext (~0.2 GB) |
 
 ## Fases
 | Fase | Estado |
 |---|---|
 | F0 Preparación + canario | ✅ |
-| F1 Internet simulado | ⏳ siguiente |
-| F2 Red Site A | ⏳ |
+| F1 Internet simulado | ✅ (docs/pruebas/F1-internet.md) |
+| F2 Red Site A | ⏳ siguiente |
 | F3 Red Site B + WAN | ⏳ |
 | F4 Servicios base | ⏳ |
 | F5 Servicios críticos | ⏳ |
@@ -36,5 +36,15 @@
 - OVS (`gns3/openvswitch`): datapath netdev; al arrancar todos los puertos están en `br0` sin VLAN.
 - Sin consola en las plantillas Filebrowser, Cloudflared, Mailpit y MinIO (son distroless): se inspeccionan con `docker exec` desde el host.
 
-## Siguiente paso (F1)
-Crear el proyecto `ACC-Lab` con inet-core (+ nodo NAT), isp1, isp2 y atacante-ext; FRR/BGP entre ISPs; NAT masquerade en inet-core; CGNAT en ISPs. Prueba: `ping 1.1.1.1` y `curl https://cloudflare.com` desde los ISP.
+## Hecho en F1
+- Internet simulado con BGP (AS65000/65001/65002), NAT de salida en inet-core (IP fija 192.168.122.10 en virbr0) y CGNAT en los ISP.
+- `scripts/deploy-config.sh <proyecto> <nodos>`: aplica `config/nodes/<nodo>/` (interfaces, frr.conf, *.nft…) **escribiendo desde dentro** del contenedor. Después hay que reiniciar el nodo.
+- Host: libvirt + red `default` (virbr0) activa; dnsmasq instalado; ufw con `allow in on virbr0` y `route allow in on virbr0`.
+
+## Errores conocidos / gotchas (F1)
+- **No usar `docker cp`** para configs: no persisten (GNS3 monta los volúmenes con bind dentro del contenedor).
+- `/etc/resolv.conf` lo regenera Docker → el DNS va en `/etc/network/interfaces` (`up printf 'nameserver …' > /etc/resolv.conf`).
+- ufw del host bloquea virbr0 si no tiene esas dos reglas.
+
+## Siguiente paso (F2)
+Site A: wsw-a1/wsw-a2 (Ethernet switch integrado) en WAN1/WAN2 → fw-a1/fw-a2 (OPNsense, CARP + pfsync en vtnet4) → lagg failover hacia sw-a1/sw-a2 (OVS, trunks VLAN 10–60, LACP entre switches). Pruebas: inter-VLAN, apagar fw-a1 (CARP), bajar WAN1 (gateway group).

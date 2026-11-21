@@ -1,0 +1,8 @@
+# isp2: CGNAT de las sedes (100.64.0.0/10 -> 198.51.100.254)
+flush ruleset
+table ip nat {
+  chain postrouting {
+    type nat hook postrouting priority 100;
+    ip saddr 100.64.0.0/10 oifname != "eth3" snat to 198.51.100.254
+  }
+}

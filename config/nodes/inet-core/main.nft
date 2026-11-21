@@ -1,0 +1,8 @@
+# inet-core: todo lo que sale a Internet real se enmascara con la IP de eth0
+flush ruleset
+table ip nat {
+  chain postrouting {
+    type nat hook postrouting priority 100;
+    oifname "eth0" masquerade
+  }
+}
