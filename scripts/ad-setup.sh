@@ -20,7 +20,7 @@ horario() { # usuario: elimina logonHours si existiera (el horario lo aplica la 
 }
 usuario() { # usuario grupo "Nombre Apellido"
   read -r gn sn <<<"$3"
-  dcx "samba-tool user show $1 >/dev/null 2>&1 || samba-tool user create $1 \"\$AP\" --given-name='$gn' --surname='$sn' >/dev/null; samba-tool user setexpiry $1 --noexpiry >/dev/null; samba-tool group addmembers $2 $1 >/dev/null 2>&1 || true; echo '  usuario $1 ($2)'"
+  dcx "samba-tool user show $1 >/dev/null 2>&1 || samba-tool user create $1 \"\$AP\" --given-name='$gn' --surname='$sn' >/dev/null; samba-tool user setexpiry $1 --noexpiry >/dev/null; samba-tool group addmembers $2 $1 >/dev/null 2>&1 || true; dn=\$(ldbsearch -H /var/lib/samba/private/sam.ldb \"(sAMAccountName=$1)\" dn | sed -n 's/^dn: //p'); printf 'dn: %s\nchangetype: modify\nreplace: mail\nmail: %s@alcaldia.lab\n' \"\$dn\" '$1' | ldbmodify -H /var/lib/samba/private/sam.ldb >/dev/null; echo '  usuario $1 ($2, $1@alcaldia.lab)'"
   [ "$2" = funcionarios ] && horario "$1" || true
 }
 if [ "${1:-}" = usuario ]; then usuario "$2" "$3" "$4"; exit; fi
