@@ -54,6 +54,7 @@ docker_tpl ACC-Escritorio    acc/escritorio:1.0                 2  telnet guest
 docker_tpl ACC-Gate          acc/gate:1.0                       2  telnet guest
 docker_tpl ACC-Portal        acc/portal:1.0                     2  telnet guest
 docker_tpl ACC-PG            acc/pg:1.0                         2  telnet guest
+docker_tpl ACC-LAM           acc/lam:1.0                        2  telnet guest
 create ACC-PC-GUI "$(python3 -c 'import json;print(json.dumps({"name":"ACC-PC-GUI","template_type":"docker","image":"acc/pc-gui:1.0","adapters":1,"console_type":"vnc","console_resolution":"1366x768","category":"guest","compute_id":"local"}))')"
 
 if [ -n "$OPN_IMG" ]; then

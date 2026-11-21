@@ -23,8 +23,9 @@ ovs-vsctl set port eth13 tag=20   # portal-db
 ovs-vsctl set port eth16 tag=20   # archivo
 ovs-vsctl set port eth17 tag=20   # mailpit
 ovs-vsctl set port eth18 tag=50   # pc-gui (USUARIOS)
+ovs-vsctl set port eth21 tag=20        # lam (gestión de identidades)
 # Puertos libres -> VLAN de aparcamiento 999 (sin gateway)
-for p in eth0 eth2 eth10 eth8 eth21 eth22 eth23; do
+for p in eth0 eth2 eth10 eth8 eth22 eth23; do
   ovs-vsctl --if-exists set port $p tag=999
 done
 # Interfaz de gestión en VLAN 10

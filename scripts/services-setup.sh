@@ -30,3 +30,8 @@ sys.stdout.write(re.sub(r"\$\{(\w+)\}", lambda m: os.environ[m.group(1)], t))
 PY2
 put $AUTH /config/certs/ca.crt < config/pki/ca.crt
 for l in es en; do put $AUTH /config/assets/locales/$l/portal.json < config/authelia/assets/locales/$l/portal.json; done
+# --- LAM (solo Site A): perfil AD versionado + secretos ---
+if [ "$SITE" = A ]; then
+  put lam /etc/acc/lam-perfil.json < config/lam/lam-perfil.json
+  printf "SVC_LDAP_PASS='%s'\nLAM_MASTER_PASS='%s'\n" "$SVC_LDAP_PASS" "$LAM_MASTER_PASS" | put lam /etc/acc/lam.env
+fi

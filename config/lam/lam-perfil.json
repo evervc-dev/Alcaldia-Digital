@@ -1,0 +1,30 @@
+{
+  "ServerURL": "ldaps://10.10.20.10:636",
+  "useTLS": "no",
+  "followReferrals": "false",
+  "pagedResults": "true",
+  "serverDisplayName": "AD Alcaldía Digital",
+  "defaultLanguage": "es_ES.utf8",
+  "timeZone": "America/El_Salvador",
+  "accessLevel": "100",
+  "activeTypes": "user,group",
+  "loginMethod": "search",
+  "loginSearchSuffix": "DC=ad,DC=alcaldia,DC=lab",
+  "loginSearchFilter": "(&(sAMAccountName=%USER%)(|(memberOf=CN=gestores-identidad,CN=Users,DC=ad,DC=alcaldia,DC=lab)(memberOf=CN=Domain Admins,CN=Users,DC=ad,DC=alcaldia,DC=lab)))",
+  "loginSearchDN": "CN=svc-lectura,CN=Users,DC=ad,DC=alcaldia,DC=lab",
+  "Admins": "CN=svc-lectura,CN=Users,DC=ad,DC=alcaldia,DC=lab",
+  "pwdResetForcePasswordChange": "false",
+  "typeSettings": {
+    "suffix_user": "OU=Funcionarios,DC=ad,DC=alcaldia,DC=lab",
+    "attr_user": "#sAMAccountName;#givenName;#sn;#mail;#userAccountControl",
+    "modules_user": "windowsUser",
+    "filter_user": "(objectClass=user)",
+    "suffix_group": "CN=Users,DC=ad,DC=alcaldia,DC=lab",
+    "attr_group": "#cn;#description;#member",
+    "modules_group": "windowsGroup",
+    "filter_group": "(|(cn=funcionarios)(cn=gestores-identidad)(cn=acceso-24h))"
+  },
+  "moduleSettings": {
+    "windowsUser_domains": ["ad.alcaldia.lab"]
+  }
+}

@@ -15,3 +15,4 @@ fill AUTHELIA_STORAGE_KEY "$(rnd 48)"
 fill SVC_LDAP_PASS "Svc-$(rnd 16)-7k"            # cuenta de servicio LDAP (solo lectura)
 fill LAB_USER_PASS "Demo-$(rnd 10)-4q"            # contraseña común de los usuarios de demostración
 fill MINIO_ROOT_PASS "$(rnd 28)"
+fill LAM_MASTER_PASS "$(rnd 24)"           # contraseña maestra de configuración de LAM

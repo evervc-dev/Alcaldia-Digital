@@ -36,6 +36,9 @@ access_control:
       subject: [['group:funcionarios'], ['group:acceso-24h']]
     - domain: 'portal.evervc.dev'
       policy: bypass
+    - domain: 'lam.evervc.dev'          # gestión de identidades: solo TI (PLAN §12), accesible solo por WARP
+      policy: two_factor
+      subject: [['group:gestores-identidad'], ['group:Domain Admins']]
     - domain: 'archivo.evervc.dev'
       policy: two_factor
       subject: [['group:funcionarios'], ['group:acceso-24h']]
