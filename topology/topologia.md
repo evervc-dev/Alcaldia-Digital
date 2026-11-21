@@ -15,7 +15,7 @@ Camino de energía: **A** = UPS A / circuito A; **B** = UPS B / circuito B; **AB
 ## Site A (Tier II)
 | Nodo | Plantilla | Energía | Interfaces |
 |---|---|---|---|
-| wsw-a1, wsw-a2 | Ethernet switch (integrado) | — (lado del proveedor) | segmento WAN1 / WAN2 |
+| wsw-a1, wsw-a2 | ACC-OVS (4 puertos; sustituyen al switch integrado de GNS3, que falló al reabrir) | — (lado del proveedor) | eth1 ISP, eth2 fw-a1, eth3 fw-a2 |
 | fw-a1 | ACC-OPNsense | A | vtnet0 WAN1 (wsw-a1), vtnet1 WAN2 (wsw-a2), vtnet2 trunk → sw-a1 eth1, vtnet3 pfsync ↔ fw-a2 |
 | fw-a2 | ACC-OPNsense | B | igual, pero vtnet2 trunk → sw-a2 eth1 |
 | sw-a1 | ACC-OVS | A | eth1 trunk fw-a1, eth14+eth15 LACP ↔ sw-a2, eth3 adm-pc, eth4–13 eth0 de los servidores, mgmt 10.10.10.11 |

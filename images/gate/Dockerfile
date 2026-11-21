@@ -3,4 +3,4 @@ FROM alpine:3.20
 RUN apk add --no-cache python3 py3-ldap3 tzdata iproute2 iputils bash
 COPY rootfs/ /
 VOLUME ["/etc/acc"]
-CMD ["/bin/sh", "-c", "python3 /opt/acc/gate.py > /var/log/gate.log 2>&1 & exec /bin/sh"]
+CMD ["/bin/sh", "-c", "(while true; do python3 /opt/acc/gate.py >> /var/log/gate.log 2>&1; sleep 5; done) & exec /bin/sh"]

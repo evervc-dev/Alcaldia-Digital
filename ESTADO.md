@@ -82,6 +82,11 @@
 - NAS A/B inmutables con réplica; ts1 con escritorios por RDP; horario por política de grupo con mensaje (RDP y web); portal, archivo y Authelia publicados por Cloudflare; Site B en espera con réplica horaria de la BD y `dr-dns-switch.sh`.
 - Scripts nuevos: ad-setup.sh, ad-tls.sh, nas-setup.sh, cf-setup.sh, services-setup.sh (SITE=A|B), archivo-setup.sh [nodo], dr-dns-switch.sh, gen-if.py.
 
+## Incidente al abrir la GUI (21/11 ~16:05) — resuelto
+- Al conectarse la GUI, GNS3 rehízo los switches integrados WAN (`wsw-a1/wsw-a2`, bridges Linux del host) y falló (`brctl vlan_add ... Invalid argument`): el puerto del ISP quedó fuera del bridge → **Site A sin Internet**. Arreglo inmediato con sudo (usuario) y **sustitución definitiva de wsw-a1/wsw-a2 por ACC-OVS** (ya no quedan switches integrados).
+- Tras el corte, cloudflared-a quedó con conexiones muertas (502) → reinicio del nodo.
+- Nuevo: `scripts/lab-check.sh` (chequeo de salud) y `docs/OPERACION.md` (apagar/encender). Envoltorios con reintento (authelia, nginx, cloudflared, portal, gate) para el arranque en frío.
+
 ## Pendientes que arrastra F5
 1. **WARP:** el token necesita el permiso *Zero Trust: Edit* y los correos autorizados para enrolar dispositivos → split tunnel sin 10.0.0.0/8, reglas de inscripción y política de red (ts1:3389). Rutas privadas y warp-routing ya activos.
 2. TOTP de extremo a extremo: lo valida el usuario en el navegador.
