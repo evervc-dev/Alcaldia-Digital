@@ -386,3 +386,14 @@ acc-gns3/                       (repo git → GitHub)
 | 13 | Entrega | 48 h desde el 21/11/2026 |
 | — | IaC | Sin sops/age ni ansible: `.env` local + scripts bash |
 | — | Contenedores | Imágenes oficiales en nodos separados (sin s6 ni empaquetados propios) |
+
+## 11. Cambios de alcance aprobados durante la ejecución (21/11/2026)
+
+| Tema | Decisión | Dónde |
+|---|---|---|
+| Escritorios de usuario | Servidor `ts1` (XFCE + xrdp, unido al AD) con `/home/ALCALDIA/<usuario>` creado en el primer acceso; acceso por RDP desde sedes, ADMIN y remoto (WARP) | F5 |
+| Horario laboral | `funcionarios` lun–vie 8:00–16:00; `acceso-24h` (técnicos/administradores) sin restricción. **Política por grupo** (`config/politicas/horario.conf`), aplicada con **mensaje explícito** en el escritorio (ts1) y en la web (horario-gate). Se descartó `logonHours` porque el DC rechaza sin que el usuario vea el motivo | F5 |
+| NAS | Se adelanta de F9 a F5: MinIO A/B con Object Lock, réplica y login con AD; F9 añade los respaldos restic | F5/F9 |
+| Identidad web | Authelia sobre LDAPS con CA propia del laboratorio; almacenamiento en PostgreSQL replicado al Site B (los TOTP sobreviven al DR) | F5 |
+| Publicación | Cloudflare Tunnel A/B por API (`cf-setup.sh`), DR por cambio de CNAME (`dr-dns-switch.sh`); WARP con rutas privadas 10.10/16 y 10.20/16 | F5/F7 |
+| Pruebas nuevas | T11 horario con mensaje, T12 escritorio desde sede/ADMIN/remoto, T13 restaurar un home desde el NAS | F10 |

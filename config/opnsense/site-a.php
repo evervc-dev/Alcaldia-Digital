@@ -158,6 +158,7 @@ $rule('opt3', 'pass', 'DMZ -> servicios publicados', ['destination_net' => 'opt2
 $rule('opt3', 'pass', 'DMZ -> DNS interno', ['destination_net' => 'opt2', 'protocol' => 'TCP/UDP', 'destination_port' => '53']);
 $rule('opt3', 'pass', 'DMZ -> servidores Site B (DNS secundario / DR)', ['destination_net' => '10.20.20.0/24', 'protocol' => 'TCP/UDP', 'destination_port' => 'PUERTOS_PUBLICADOS']);
 $rule('opt3', 'pass', 'DMZ -> DNS Site B', ['destination_net' => '10.20.20.0/24', 'protocol' => 'TCP/UDP', 'destination_port' => '53']);
+$rule('opt3', 'pass', 'WARP (cloudflared-a) -> escritorios ts1 RDP', ['source_net' => '10.10.30.11/32', 'destination_net' => '10.10.20.40/32', 'protocol' => 'TCP', 'destination_port' => 'PUERTOS_RDP']);
 $rule('opt3', 'pass', 'DMZ -> Internet (cloudflared)', ['destination_net' => '10.0.0.0/8', 'destination_not' => '1', 'log' => '0']);
 $rule('opt3', 'block', 'DMZ: resto bloqueado');
 $rule('opt5', 'pass', 'USUARIOS -> escritorios (ts1 RDP)', ['destination_net' => '10.10.20.40/32', 'protocol' => 'TCP', 'destination_port' => 'PUERTOS_RDP']);

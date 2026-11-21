@@ -86,3 +86,16 @@ OSPF área 0 sobre VTI: costo 10 (A por WAN1), 20 (A por WAN2), 100 (B). Las sed
 
 Todo bloqueo queda registrado (log en OPNsense → syslog → Zabbix). Suricata en modo IPS en WAN y DMZ.
 
+
+### Altas de F5 (fuente: este archivo)
+| Host | Site A | Site B |
+|---|---|---|
+| authelia | 10.10.20.11 | 10.20.20.11 (espera) |
+| gate (horario-gate) | 10.10.20.13 | 10.20.20.13 (espera) |
+| portal / portal-db | 10.10.20.20 / .22 | 10.20.20.20 (espera) / .22 (réplica) |
+| archivo | 10.10.20.21 | 10.20.20.21 (espera) |
+| mailpit | 10.10.20.32 | — |
+| ts1 (escritorios) | 10.10.20.40 | — |
+| nginx-dmz / cloudflared | 10.10.30.10 / .11 | 10.20.30.10 / .11 |
+| nas | 10.10.60.10 | 10.20.60.10 |
+| pc-gui | VLAN 50 DHCP (.100–.199) | — |

@@ -1,0 +1,7 @@
+# archivo-b: archivo digital en espera (se restaura desde nas-b)
+auto eth0
+iface eth0 inet static
+	address 10.20.20.21
+	netmask 255.255.255.0
+	gateway 10.20.20.1
+	up printf 'search ad.alcaldia.lab\nnameserver 10.20.20.10\nnameserver 10.10.20.10\n' > /etc/resolv.conf

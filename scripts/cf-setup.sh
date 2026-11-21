@@ -19,7 +19,7 @@ tunnel() { # nombre ip_nginx sufijo
 import json,sys
 hs='$HOSTS'.split(); z='$CF_ZONE'
 r=[{'hostname':f'{h}.{z}','service':'http://$2:80','originRequest':{'httpHostHeader':f'{h}.{z}'}} for h in hs]
-r.append({'service':'http_status:404'}); print(json.dumps({'config':{'ingress':r}}))")
+r.append({'service':'http_status:404'}); print(json.dumps({'config':{'ingress':r,'warp-routing':{'enabled':True}}}))")
   curl -fsS "${H[@]}" -X PUT "$API/accounts/$CF_ACCOUNT_ID/cfd_tunnel/$id/configurations" -d "$ing" >/dev/null && echo "  ingress $1: $HOSTS -> $2:80"
 }
 tunnel acc-site-a 10.10.30.10 A
@@ -30,4 +30,10 @@ for h in $HOSTS; do   # DNS -> túnel del Site A (el DR cambia a B con dr-dns-sw
   rid=$(curl -fsS "${H[@]}" "$API/zones/$ZID/dns_records?name=$name" | py 'r=d["result"]; print(r[0]["id"] if r else "")')
   if [ -n "$rid" ]; then curl -fsS "${H[@]}" -X PUT "$API/zones/$ZID/dns_records/$rid" -d "$body" >/dev/null; else curl -fsS "${H[@]}" -X POST "$API/zones/$ZID/dns_records" -d "$body" >/dev/null; fi
   echo "  DNS $name -> túnel A"
+done
+# Rutas privadas para WARP (acceso interno desde equipos reales): ambas redes por el túnel A (B se alcanza por la VTI)
+for net in 10.10.0.0/16 10.20.0.0/16; do
+  ex=$(curl -fsS "${H[@]}" "$API/accounts/$CF_ACCOUNT_ID/teamnet/routes?network_subset=$net&is_deleted=false" | py 'print(len(d["result"]))')
+  [ "$ex" = 0 ] && curl -fsS "${H[@]}" -X POST "$API/accounts/$CF_ACCOUNT_ID/teamnet/routes" -d "{\"network\":\"$net\",\"tunnel_id\":\"$CF_TUNNEL_ID_A\",\"comment\":\"ACC WARP\"}" >/dev/null
+  echo "  ruta privada $net -> túnel A"
 done

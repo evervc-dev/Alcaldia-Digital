@@ -16,7 +16,7 @@ authentication_backend:
     disable: true
   ldap:
     implementation: activedirectory
-    address: 'ldaps://10.10.20.10:636'
+    address: '${LDAP_ADDR}'
     tls:
       skip_verify: false
       minimum_version: 'TLS1.2'
@@ -45,13 +45,13 @@ session:
     - domain: 'evervc.dev'
       authelia_url: 'https://auth.evervc.dev'
       default_redirection_url: 'https://portal.evervc.dev/funcionarios'
-storage:
+storage:                    # en la BD del portal (esquema authelia) -> se replica al Site B con la BD (TOTP incluidos)
   encryption_key: '${AUTHELIA_STORAGE_KEY}'
-  local:
-    path: '/config/db.sqlite3'
+  postgres:
+    address: 'tcp://${PG_ADDR}:5432'
+    database: 'portal'
+    schema: 'authelia'
+    username: 'portal'
+    password: '${PORTAL_DB_PASS}'
 notifier:
-  smtp:
-    address: 'smtp://10.10.20.32:1025'
-    sender: 'Alcaldia Digital <no-reply@evervc.dev>'
-    disable_require_tls: true
-    disable_starttls: true
+${NOTIFIER}
