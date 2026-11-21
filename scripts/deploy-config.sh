@@ -3,6 +3,7 @@
 # Mapeo:  interfaces -> /etc/network/interfaces   frr.conf -> /etc/frr/frr.conf
 #         *.nft -> /etc/nftables.d/               swanctl.conf -> /etc/swanctl/conf.d/
 #         dnsmasq.conf -> /etc/dnsmasq.d/         snmpd.conf -> /etc/snmp/snmpd.conf
+#         ovs.sh -> /etc/openvswitch/acc-ovs.sh (y se ejecuta: queda en conf.db)
 #         files/<ruta> -> /<ruta> (cualquier otro archivo, ruta absoluta)
 # Uso: deploy-config.sh <proyecto> <nodo...>     (luego reiniciar el nodo con gns3-mcp)
 set -euo pipefail
@@ -26,6 +27,7 @@ for n in "$@"; do
       swanctl.conf) cp_in "$f" /etc/swanctl/conf.d/acc.conf ;;
       dnsmasq.conf) cp_in "$f" /etc/dnsmasq.d/acc.conf ;;
       snmpd.conf)   cp_in "$f" /etc/snmp/snmpd.conf ;;
+      ovs.sh)       cp_in "$f" /etc/openvswitch/acc-ovs.sh; docker exec "$C" sh /etc/openvswitch/acc-ovs.sh && echo "  $n: ovs.sh ejecutado (conf.db)" ;;
       files)        (cd "$f" && find . -type f) | while read -r r; do cp_in "$f/$r" "/${r#./}"; done ;;
     esac
   done

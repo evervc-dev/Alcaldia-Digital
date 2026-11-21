@@ -16,10 +16,11 @@ Camino de energía: **A** = UPS A / circuito A; **B** = UPS B / circuito B; **AB
 | Nodo | Plantilla | Energía | Interfaces |
 |---|---|---|---|
 | wsw-a1, wsw-a2 | Ethernet switch (integrado) | — (lado del proveedor) | segmento WAN1 / WAN2 |
-| fw-a1 | ACC-OPNsense | A | vtnet0 WAN1, vtnet1 WAN2, vtnet2 → sw-a1, vtnet3 → sw-a2 (lagg failover), vtnet4 pfsync ↔ fw-a2 |
-| fw-a2 | ACC-OPNsense | B | igual que fw-a1 |
-| sw-a1 | ACC-OVS | A | trunk fw-a1/fw-a2, LACP ×2 ↔ sw-a2, eth0 de los servidores |
-| sw-a2 | ACC-OVS | B | trunk fw-a1/fw-a2, LACP ×2 ↔ sw-a1, eth1 de los servidores |
+| fw-a1 | ACC-OPNsense | A | vtnet0 WAN1 (wsw-a1), vtnet1 WAN2 (wsw-a2), vtnet2 trunk → sw-a1 eth1, vtnet3 pfsync ↔ fw-a2 |
+| fw-a2 | ACC-OPNsense | B | igual, pero vtnet2 trunk → sw-a2 eth1 |
+| sw-a1 | ACC-OVS | A | eth1 trunk fw-a1, eth14+eth15 LACP ↔ sw-a2, eth3 adm-pc, eth4–13 eth0 de los servidores, mgmt 10.10.10.11 |
+| sw-a2 | ACC-OVS | B | eth1 trunk fw-a2, eth14+eth15 LACP ↔ sw-a1, eth3 adm-pc, eth4–13 eth1 de los servidores, mgmt 10.10.10.12 |
+| adm-pc | ACC-PC | AB | bond0 (eth0 → sw-a1 eth3, eth1 → sw-a2 eth3), VLAN 40, 10.10.40.50 |
 | dc1, authelia, redis, portal, portal-db, archivo, nginx-dmz, cloudflared-a, zbx-db, zbx-server, zbx-web, mailpit, nas-a | varias | AB | bond0 active-backup (eth0 → sw-a1, eth1 → sw-a2) |
 
 ## Site B (Tier I)

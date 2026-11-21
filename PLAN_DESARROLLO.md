@@ -112,8 +112,8 @@ flowchart TB
 | Proveedores | ISP1 + ISP2, *gateway group* en OPNsense (tier 1/tier 2) y BGP en los ISP | Bajar WAN1 → tráfico por WAN2; medir conmutación |
 | Firewalls | FW-A1/FW-A2 CARP (VIP en cada VLAN y en WAN), pfsync dedicado, sincronización XMLRPC | Apagar FW-A1 |
 | Núcleo | SW-A1 (camino A) / SW-A2 (camino B), LACP inter-switch | Apagar SW-A1 |
-| Uplinks FW | `lagg` *failover* (un puerto a cada switch) | Apagar SW-A1 |
-| Servidores | `bond0` active-backup (eth0→SW-A1, eth1→SW-A2) = "fuente 1/fuente 2" | Apagar camino A completo (FW-A1 + SW-A1) |
+| Uplinks FW | fw-a1 → sw-a1 (camino A), fw-a2 → sw-a2 (camino B); CARP pasa por el LACP entre switches (en GNS3 la portadora no cae, por eso no se usa lagg) | Apagar SW-A1 + FW-A1 |
+| Servidores | `bond0` active-backup con monitoreo ARP a la VIP (eth0→SW-A1, eth1→SW-A2) = "fuente 1/fuente 2" | Apagar camino A completo (FW-A1 + SW-A1) |
 | Túneles | 2 VTI por sede hacia A + 1 hacia B, OSPF con costos 10/20/100 | Bajar túnel o ISP |
 
 Site B (Tier I): un FW, servidores con un solo enlace; SW-B2 solo como expansión (documentado como 2 switches).

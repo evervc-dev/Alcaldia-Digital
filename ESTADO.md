@@ -2,19 +2,19 @@
 
 | Campo | Valor |
 |---|---|
-| Fase actual | **F1 ✅ terminada** → siguiente: **F2 Red Site A** |
+| Fase actual | **F2 ✅ terminada** → siguiente: **F3 Site B + WAN (IPsec VTI + OSPF)** |
 | Última actualización | 2026-11-21 ~12:10 (hora local) |
 | Plazo | 48 h → 2026-11-23 |
 | Proyectos GNS3 abiertos | `ACC-Lab` (id 88f8f32e-4b4f-4e25-9a8b-ac0c9c71c5f9) |
-| Nodos encendidos | internet-real (NAT), inet-core, isp1, isp2, atacante-ext (~0.2 GB) |
+| Nodos encendidos | F1 + wsw-a1/2, fw-a1/fw-a2 (OPNsense 1.5 GB c/u), sw-a1/sw-a2, adm-pc (~3.5 GB en total) |
 
 ## Fases
 | Fase | Estado |
 |---|---|
 | F0 Preparación + canario | ✅ |
 | F1 Internet simulado | ✅ (docs/pruebas/F1-internet.md) |
-| F2 Red Site A | ⏳ siguiente |
-| F3 Red Site B + WAN | ⏳ |
+| F2 Red Site A | ✅ (docs/pruebas/F2-site-a.md) |
+| F3 Red Site B + WAN | ⏳ siguiente |
 | F4 Servicios base | ⏳ |
 | F5 Servicios críticos | ⏳ |
 | F6 Kits de sede | ⏳ |
@@ -46,5 +46,17 @@
 - `/etc/resolv.conf` lo regenera Docker → el DNS va en `/etc/network/interfaces` (`up printf 'nameserver …' > /etc/resolv.conf`).
 - ufw del host bloquea virbr0 si no tiene esas dos reglas.
 
-## Siguiente paso (F2)
-Site A: wsw-a1/wsw-a2 (Ethernet switch integrado) en WAN1/WAN2 → fw-a1/fw-a2 (OPNsense, CARP + pfsync en vtnet4) → lagg failover hacia sw-a1/sw-a2 (OVS, trunks VLAN 10–60, LACP entre switches). Pruebas: inter-VLAN, apagar fw-a1 (CARP), bajar WAN1 (gateway group).
+## Hecho en F2
+- fw-a1/fw-a2 configurados con `config/opnsense/site-a.php` (VLAN 10–60, CARP ×8, 2 gateways con monitoreo + killstates, grupo WAN_FAILOVER, reglas por zona, NAT de salida a las VIP, pfsync en vtnet3).
+- **Cómo aplicar cambios en OPNsense:** servir `config/opnsense/` con `python3 -m http.server 8088 --bind 192.168.122.1` en el host → en el FW (shell, `exec sh`): `fetch -qo /root/site-a.php http://192.168.122.1:8088/site-a.php && cd /usr/local/opnsense/mvc && php /root/site-a.php a1|a2`. Después reiniciar el FW o recargar el servicio afectado.
+- Switches con `config/nodes/sw-a*/ovs.sh` (trunk eth1, LACP isl, acceso eth3 = VLAN 40, libres en VLAN 999, mgmt VLAN 10).
+- Pruebas Tier II: falla de FW ≈ 3,1 s, falla de ISP ≈ 4,5 s, pérdida del camino A ≈ 2–3 s.
+
+## Errores conocidos / gotchas (F2)
+- Root de OPNsense con la contraseña por defecto (`opnsense`): **pendiente** cambiarla (valor en `.env`, `OPNSENSE_ROOT_PASS`).
+- La shell de root de OPNsense es csh: hacer siempre `exec sh` antes de comandos con redirecciones o comillas.
+- Si fw-a1 arranca como BACKUP: revisar `sysctl net.inet.carp.demotion` (pfsync) y corregir con `=-240`.
+- OVS: ojo al asignar puertos de servidores (eth4–13 → VLAN de su zona en **ambos** switches).
+
+## Siguiente paso (F3)
+Site B: fw-b (OPNsense, WAN1 203.0.113.10/30, WAN2 198.51.100.10/30, trunk → sw-b1) + sw-b1/sw-b2. IPsec VTI A↔B por ISP1 y por ISP2 + OSPF (os-frr). **Plan B inmediato** si CARP + VTI falla: túneles a la IP propia de cada FW.
