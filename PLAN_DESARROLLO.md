@@ -397,3 +397,19 @@ acc-gns3/                       (repo git → GitHub)
 | Identidad web | Authelia sobre LDAPS con CA propia del laboratorio; almacenamiento en PostgreSQL replicado al Site B (los TOTP sobreviven al DR) | F5 |
 | Publicación | Cloudflare Tunnel A/B por API (`cf-setup.sh`), DR por cambio de CNAME (`dr-dns-switch.sh`); WARP con rutas privadas 10.10/16 y 10.20/16 | F5/F7 |
 | Pruebas nuevas | T11 horario con mensaje, T12 escritorio desde sede/ADMIN/remoto, T13 restaurar un home desde el NAS | F10 |
+
+## 12. Gestión de identidades por web (definido con el usuario, 21/11/2026)
+
+**Proceso (Fase 4, Tabla 2):** el enlace municipal solicita el alta, baja o cambio en la mesa de servicio → la ejecuta **TI** (responsable: Jefe de Servicios y Aplicaciones). RRHH no administra el AD.
+
+| Aspecto | Decisión |
+|---|---|
+| Herramienta | **LDAP Account Manager (LAM)** sobre el AD por LDAPS (CA del laboratorio); cada técnico entra con **su propia cuenta** (sin cuenta maestra) |
+| Acceso desde Internet | **Solo por WARP** (VPN de cliente Zero Trust del diseño): sin URL pública. Inscripción limitada a correos autorizados y política de red que solo permite llegar al portal |
+| Capas | WARP (dispositivo + identidad) → Authelia MFA (grupo `gestores-identidad`) → login de LAM con cuenta AD → permisos delegados en el AD → auditoría |
+| Roles | `gestores-identidad` (TI): crear, deshabilitar, borrar, resetear contraseña y mover entre sedes **solo en OU=Funcionarios**. Asignar `acceso-24h`, gestionar administradores o cuentas de servicio: **solo Domain Admins** |
+| Estructura | `OU=Funcionarios` → `OU=Sede-01`, `Sede-02`, `Sede-03` (plantilla replicable para las 139 sedes) |
+| Bajas | En dos pasos: deshabilitar → borrado definitivo separado (papelera de reciclaje del AD) |
+| Contraseña inicial | La fija TI y se entrega por canal seguro (sin «cambiar en el próximo inicio»: Authelia/xrdp no ofrecen esa pantalla) |
+| Auditoría | Registro de altas, bajas y resets (quién/qué/cuándo) en el DC y syslog; alerta en Zabbix (F8) |
+| Pruebas | alta y baja por un gestor; un gestor intenta modificar a `admin.dc` o dar `acceso-24h` → **denegado**; acceso sin WARP o sin MFA → **denegado** |
