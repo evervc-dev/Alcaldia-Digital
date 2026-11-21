@@ -1,0 +1,1 @@
+gate.env (no versionado): LDAP_BIND_DN=svc-lectura@ad.alcaldia.lab / LDAP_BIND_PW=<de .env>

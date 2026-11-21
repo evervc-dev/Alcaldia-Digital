@@ -122,7 +122,7 @@ Config::getInstance()->save();
 
 /* ---------- Alias de puertos (las reglas no aceptan listas) ---------- */
 $al = new \OPNsense\Firewall\Alias();
-$want = ['PUERTOS_PUBLICADOS' => "80\n443\n8000\n8080\n9091", 'PUERTOS_WEB_DNS' => "53\n80\n443", 'PUERTOS_IKE' => "500\n4500"];
+$want = ['PUERTOS_PUBLICADOS' => "80\n443\n8000\n8080\n9091", 'PUERTOS_WEB_DNS' => "53\n80\n443", 'PUERTOS_IKE' => "500\n4500", 'PUERTOS_AD' => "53\n88\n389\n636", 'PUERTOS_RDP' => "3389"];
 foreach ($al->aliases->alias->iterateItems() as $uuid => $a) {
     if (isset($want[(string)$a->name])) { $al->aliases->alias->del($uuid); }
 }
@@ -160,10 +160,12 @@ $rule('opt3', 'pass', 'DMZ -> servidores Site B (DNS secundario / DR)', ['destin
 $rule('opt3', 'pass', 'DMZ -> DNS Site B', ['destination_net' => '10.20.20.0/24', 'protocol' => 'TCP/UDP', 'destination_port' => '53']);
 $rule('opt3', 'pass', 'DMZ -> Internet (cloudflared)', ['destination_net' => '10.0.0.0/8', 'destination_not' => '1', 'log' => '0']);
 $rule('opt3', 'block', 'DMZ: resto bloqueado');
+$rule('opt5', 'pass', 'USUARIOS -> escritorios (ts1 RDP)', ['destination_net' => '10.10.20.40/32', 'protocol' => 'TCP', 'destination_port' => 'PUERTOS_RDP']);
 $rule('opt5', 'pass', 'USUARIOS -> servicios web y DNS', ['destination_net' => 'opt2', 'protocol' => 'TCP/UDP', 'destination_port' => 'PUERTOS_WEB_DNS']);
 $rule('opt5', 'pass', 'USUARIOS -> servicios del Site B (DNS secundario / DR)', ['destination_net' => '10.20.20.0/24', 'protocol' => 'TCP/UDP', 'destination_port' => 'PUERTOS_WEB_DNS']);
 $rule('opt5', 'pass', 'USUARIOS -> Internet', ['destination_net' => '10.0.0.0/8', 'destination_not' => '1', 'log' => '0']);
 $rule('opt5', 'block', 'USUARIOS: resto bloqueado');
+$rule('opt6', 'pass', 'RESPALDO -> DC local (LDAP/Kerberos/DNS para el NAS)', ['destination_net' => 'opt2', 'protocol' => 'TCP/UDP', 'destination_port' => 'PUERTOS_AD', 'log' => '0']);
 $rule('opt6', 'pass', 'RESPALDO -> Internet/Site B', ['destination_net' => '10.10.0.0/16', 'destination_not' => '1', 'log' => '0']);
 $rule('opt6', 'block', 'RESPALDO: resto bloqueado');
 // NAT de salida hacia la VIP CARP de cada WAN (las sesiones sobreviven al failover)

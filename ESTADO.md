@@ -2,7 +2,7 @@
 
 | Campo | Valor |
 |---|---|
-| Fase actual | **F4 ✅ terminada** → siguiente: **F5 Servicios críticos (Authelia MFA, portal, archivo, nginx DMZ)** |
+| Fase actual | **F5 🔄 EN CURSO (pausada 21/11 ~14:45)** — ver «Retomar F5» abajo |
 | Última actualización | 2026-11-21 ~12:10 (hora local) |
 | Plazo | 48 h → 2026-11-23 |
 | Proyectos GNS3 abiertos | `ACC-Lab` (id 88f8f32e-4b4f-4e25-9a8b-ac0c9c71c5f9) |
@@ -16,7 +16,7 @@
 | F2 Red Site A | ✅ (docs/pruebas/F2-site-a.md) |
 | F3 Red Site B + WAN | ✅ (docs/pruebas/F3-site-b-wan.md) |
 | F4 Servicios base | ✅ (docs/pruebas/F4-servicios-base.md) |
-| F5 Servicios críticos | ⏳ siguiente |
+| F5 Servicios críticos (+NAS, escritorios, horario, Cloudflare) | 🔄 en curso |
 | F6 Kits de sede | ⏳ |
 | F7 Publicación Cloudflare | ⏳ |
 | F8 Monitoreo (mínimo) | ⏳ |
@@ -78,5 +78,24 @@
 - Cambiar la imagen Docker de un nodo exige **recrear el nodo** (borrar + crear + volver a enlazar + deploy-config), porque restart no basta.
 - El comprobador de seguridad bloquea `rm` dentro de `sh -c`: usar `mv` o borrar desde el host.
 
-## Siguiente paso (F5)
-Site A: authelia + redis (10.10.20.11), portal + portal-db (10.10.20.20/.22), archivo (filebrowser, 10.10.20.21), nginx-dmz (10.10.30.10). Authelia con backend LDAP en dc1/dc2 + TOTP. Réplica: pg_dump horaria del portal y rsync del archivo cada 4 h al Site B (portal-db-b, archivo-b).
+## Retomar F5 (estado al pausar)
+**Hecho y probado**
+- AD: grupos `funcionarios` (logonHours lun–vie 8:00–16:00 = 14–22 UTC), `acceso-24h`, `nas-admins`; `svc-lectura`; usuarios demo ana.funcionaria / tecnico.soporte / admin.dc (`scripts/ad-setup.sh`). El DC rechaza fuera de horario con `NT_STATUS_INVALID_LOGON_HOURS` (también en LDAP: data 530).
+- CA del laboratorio y certificados LDAPS válidos en dc1/dc2 (`scripts/ad-tls.sh`; CA pública en `config/pki/ca.crt`, claves en `secrets/pki/`).
+- NAS: nas-a (10.10.60.10, bond) y nas-b (10.20.60.10) con MinIO, bucket `respaldos` con Object Lock GOVERNANCE 7d, réplica A→B y login AD (`nas-admins` → consoleAdmin) (`scripts/nas-setup.sh env|config`). Borrado bloqueado y réplica verificados.
+- ts1 (10.10.20.40, bond): XFCE + xrdp 0.10, unido al dominio (winbind), home `/home/ALCALDIA/<u>`; `wbinfo --pam-logon` devuelve el motivo del horario. xrdp escucha en :3389.
+- Switches sw-a1/sw-a2 ampliados a 24 puertos (ver incidente en la bitácora).
+- Cloudflare: túneles `acc-site-a` / `acc-site-b` + ingress + DNS `portal|archivo|auth.evervc.dev` → túnel A (`scripts/cf-setup.sh`). **cloudflared-a conectado** (4 conexiones). Zero Trust activado por el usuario: team `alcaldia-digital`.
+- Nodos web creados y con red (bond, Internet OK): cloudflared-a .30.11, authelia .20.11, gate .20.13, portal .20.20, portal-db .20.22, archivo .20.21, mailpit .20.32, nginx-dmz .30.10 (sw eth20), pc-gui (VLAN 50, sw-a1 eth18).
+
+**Pendiente inmediato (en este orden)**
+1. Reiniciar `nginx-dmz`, `portal-db`, `authelia` y `portal` (gns3-mcp) y verificar: `nginx -t`; postgres «ready to accept» (PGDATA=…/data/pgdata ya en pg.env); log de Authelia sin errores LDAP/SMTP (`/config/authelia.log`).
+2. Configurar filebrowser (archivo): `filebrowser config set --auth.method=proxy --auth.header=Remote-User` + `createUserDir` (carpeta personal por usuario) y reiniciar.
+3. Probar de extremo a extremo desde fuera: `https://portal.evervc.dev`, `/funcionarios` → Authelia → TOTP (código en mailpit :8025) → bandeja; archivo; ana.funcionaria fuera de horario → texto personalizado; sesión vigente fuera de horario → página de horario-gate.
+4. pc-gui: arrancar (consola VNC; el host ya tiene Xvfb/x11vnc/tigervnc) → RDP a ts1 → comprobar que **la pantalla de xrdp muestra el motivo del horario** (si no: plan B pamerrortxt / mensaje PAM propio).
+5. ts1: la imagen corrige los PID obsoletos de xrdp, pero el nodo usa la imagen anterior → si se recrea hay que volver a unirlo (`net ads join`).
+6. Access (team alcaldia-digital): políticas para archivo/monitor y WARP con rutas privadas 10.10.0.0/16 y 10.20.0.0/16 (el token debe incluir Access: Apps and Policies + Zero Trust).
+7. Réplicas al Site B: portal-db-b, archivo-b, nginx-dmz-b, cloudflared-b; pg_dump/WAL horaria; archivo cada 4 h; restic de /home ts1 y del archivo a nas-a.
+8. Actualizar PLAN (sección escritorios/horario/NAS), IPAM, topología y lienzo; cerrar F5 con docs/pruebas/F5-*.md.
+
+**Puertos de sw-a1/sw-a2:** eth8 y eth10 quedaron ocupados por enlaces fantasma (no usarlos). Libres: eth0, eth2, eth21–eth23 (y eth5/eth18 en sw-a2).

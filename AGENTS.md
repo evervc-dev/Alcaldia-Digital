@@ -11,3 +11,7 @@
 9. **MVP primero** (ver PLAN_DESARROLLO.md §8.0). No empieces extras (Suricata, GLPI, oxidized, cinta) sin terminar el MVP.
 10. **Cierre de fase:** actualiza `ESTADO.md`, añade a la bitácora (acciones, errores y su solución), haz commit (`Fx: ...`) y push.
 11. **Errores:** todo error con su causa y su solución va a la bitácora, para no repetirlo.
+12. **Cambios en equipos redundantes, de uno en uno:** verificar el primero (enlace, LACP, ping) **antes** de tocar el segundo.
+13. **GNS3 3.1 alfa:** cambiar `adapters` de un nodo Docker lo recrea **sin volver a cablear sus enlaces**. Hay que detenerlo, borrar sus enlaces (la API da error pero borra), volver a crearlos y arrancarlo. Cambiar la imagen exige recrear el nodo.
+14. Las salidas de `wbinfo`/`smbclient` pueden mostrar `usuario%contraseña`: filtrar siempre (`grep -v %`).
+15. **Detener un nodo antes de borrarlo:** si se borra en marcha, el puerto del switch queda ocupado por un enlace fantasma ("Port is already used").

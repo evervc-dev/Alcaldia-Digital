@@ -1,0 +1,7 @@
+# nas-b: NAS de respaldo Site B (réplica, VLAN 60)
+auto eth0
+iface eth0 inet static
+	address 10.20.60.10
+	netmask 255.255.255.0
+	gateway 10.20.60.1
+	up printf 'search ad.alcaldia.lab\nnameserver 10.20.20.10\nnameserver 10.10.20.10\n' > /etc/resolv.conf

@@ -37,18 +37,24 @@ PY
 docker_tpl ACC-Router        acc/router:1.0                     6  telnet router
 docker_tpl ACC-Kit-Sede      acc/kit-sede:1.0                   2  telnet firewall
 docker_tpl ACC-PC            acc/pc:1.0                         2  telnet guest
-docker_tpl ACC-OVS           gns3/openvswitch:latest           16  telnet switch
+docker_tpl ACC-OVS           gns3/openvswitch:latest           24  telnet switch
 docker_tpl ACC-Samba-DC      acc/samba-dc:1.0                   2  telnet guest
 docker_tpl ACC-Postgres      postgres:16-alpine                 2  telnet guest
-docker_tpl ACC-Nginx         nginx:1.27-alpine                  2  telnet guest
+docker_tpl ACC-Nginx2        acc/nginx:1.0                      2  telnet guest
 docker_tpl ACC-Redis         redis:7-alpine                     2  telnet guest
-docker_tpl ACC-Authelia      authelia/authelia:4.39.28          2  telnet guest
+docker_tpl ACC-Authelia2     acc/authelia:1.0                   2  telnet guest
 docker_tpl ACC-Filebrowser   filebrowser/filebrowser:v2.63.23   2  none   guest
-docker_tpl ACC-Cloudflared   cloudflare/cloudflared:2026.10.7   2  none   guest
+docker_tpl ACC-Cloudflared2  acc/cloudflared:1.0                2  telnet guest
 docker_tpl ACC-Zabbix-Server zabbix/zabbix-server-pgsql:alpine-7.0-latest     2 telnet guest
 docker_tpl ACC-Zabbix-Web    zabbix/zabbix-web-nginx-pgsql:alpine-7.0-latest  2 telnet guest
 docker_tpl ACC-Mailpit       axllent/mailpit:latest             2  none   guest
 docker_tpl ACC-MinIO         cgr.dev/chainguard/minio:latest    2  none   guest
+docker_tpl ACC-NAS           acc/nas:1.0                        2  telnet guest
+docker_tpl ACC-Escritorio    acc/escritorio:1.0                 2  telnet guest
+docker_tpl ACC-Gate          acc/gate:1.0                       2  telnet guest
+docker_tpl ACC-Portal        acc/portal:1.0                     2  telnet guest
+docker_tpl ACC-PG            acc/pg:1.0                         2  telnet guest
+create ACC-PC-GUI "$(python3 -c 'import json;print(json.dumps({"name":"ACC-PC-GUI","template_type":"docker","image":"acc/pc-gui:1.0","adapters":1,"console_type":"vnc","console_resolution":"1366x768","category":"guest","compute_id":"local"}))')"
 
 if [ -n "$OPN_IMG" ]; then
   create ACC-OPNsense "$(python3 -c 'import json,sys;print(json.dumps({"name":"ACC-OPNsense","template_type":"qemu","compute_id":"local","platform":"x86_64","category":"firewall","hda_disk_image":sys.argv[1],"ram":1536,"cpus":1,"adapters":5,"adapter_type":"virtio-net-pci","hda_disk_interface":"sata","console_type":"telnet","options":"-cpu host","on_close":"shutdown_signal"}))' "$OPN_IMG")"

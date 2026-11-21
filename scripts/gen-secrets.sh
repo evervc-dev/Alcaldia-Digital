@@ -12,3 +12,6 @@ fill ZABBIX_DB_PASS "$(rnd 24)"
 fill AUTHELIA_JWT_SECRET "$(rnd 48)"
 fill AUTHELIA_SESSION_SECRET "$(rnd 48)"
 fill AUTHELIA_STORAGE_KEY "$(rnd 48)"
+fill SVC_LDAP_PASS "Svc-$(rnd 16)-7k"            # cuenta de servicio LDAP (solo lectura)
+fill LAB_USER_PASS "Demo-$(rnd 10)-4q"            # contraseña común de los usuarios de demostración
+fill MINIO_ROOT_PASS "$(rnd 28)"

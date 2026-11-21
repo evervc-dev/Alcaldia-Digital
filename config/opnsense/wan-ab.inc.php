@@ -87,7 +87,7 @@ function wan_ab_apply($side, $routerid, $passive) {
     foreach (WAN_AB_TUNNELS as [$reqid, $ifn, $descr, $ao, $bo, $ai, $bi]) {
         [$me, $peer, $in_me, $in_peer] = $side === 'a' ? [$ao, $bo, $ai, $bi] : [$bo, $ao, $bi, $ai];
         $conn = $sw->Connections->Connection->Add();
-        $conn->setNodes(['enabled' => '1', 'proposals' => 'default', 'version' => '2', 'unique' => 'replace',
+        $conn->setNodes(['enabled' => '1', 'proposals' => 'default', 'version' => '2', 'unique' => 'replace', 'mobike' => '0',
             'local_addrs' => $me, 'remote_addrs' => $peer, 'dpd_delay' => '5', 'dpd_timeout' => '15',
             'keyingtries' => '0', 'description' => "$descr A<->B"]);
         $cu = $conn->getAttributes()['uuid'];
