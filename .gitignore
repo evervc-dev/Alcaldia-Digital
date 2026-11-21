@@ -12,3 +12,8 @@ downloads/
 # Varios
 __pycache__/
 *.log
+
+# Hashes de contraseñas generados desde .env (nunca a git)
+config/opnsense/*.hash
+config/opnsense/*.psk
+secrets/

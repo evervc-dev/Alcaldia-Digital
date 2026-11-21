@@ -1,0 +1,6 @@
+# sw-b1: gestión en VLAN 10 (puerto interno OVS "mgmt")
+auto mgmt
+iface mgmt inet static
+	address 10.20.10.11
+	netmask 255.255.255.0
+	gateway 10.20.10.1

@@ -2,11 +2,11 @@
 
 | Campo | Valor |
 |---|---|
-| Fase actual | **F2 ✅ terminada** → siguiente: **F3 Site B + WAN (IPsec VTI + OSPF)** |
+| Fase actual | **F3 ✅ terminada** → siguiente: **F4 Servicios base (DNS/AD, DHCP, NTP)** |
 | Última actualización | 2026-11-21 ~12:10 (hora local) |
 | Plazo | 48 h → 2026-11-23 |
 | Proyectos GNS3 abiertos | `ACC-Lab` (id 88f8f32e-4b4f-4e25-9a8b-ac0c9c71c5f9) |
-| Nodos encendidos | F1 + wsw-a1/2, fw-a1/fw-a2 (OPNsense 1.5 GB c/u), sw-a1/sw-a2, adm-pc (~3.5 GB en total) |
+| Nodos encendidos | F1 + F2 + fw-b (1 GB), sw-b1, sw-b2, adm-pc-b (~4.5 GB en total) |
 
 ## Fases
 | Fase | Estado |
@@ -14,8 +14,8 @@
 | F0 Preparación + canario | ✅ |
 | F1 Internet simulado | ✅ (docs/pruebas/F1-internet.md) |
 | F2 Red Site A | ✅ (docs/pruebas/F2-site-a.md) |
-| F3 Red Site B + WAN | ⏳ siguiente |
-| F4 Servicios base | ⏳ |
+| F3 Red Site B + WAN | ✅ (docs/pruebas/F3-site-b-wan.md) |
+| F4 Servicios base | ⏳ siguiente |
 | F5 Servicios críticos | ⏳ |
 | F6 Kits de sede | ⏳ |
 | F7 Publicación Cloudflare | ⏳ |
@@ -58,5 +58,15 @@
 - Si fw-a1 arranca como BACKUP: revisar `sysctl net.inet.carp.demotion` (pfsync) y corregir con `=-240`.
 - OVS: ojo al asignar puertos de servidores (eth4–13 → VLAN de su zona en **ambos** switches).
 
-## Siguiente paso (F3)
-Site B: fw-b (OPNsense, WAN1 203.0.113.10/30, WAN2 198.51.100.10/30, trunk → sw-b1) + sw-b1/sw-b2. IPsec VTI A↔B por ISP1 y por ISP2 + OSPF (os-frr). **Plan B inmediato** si CARP + VTI falla: túneles a la IP propia de cada FW.
+## Hecho en F3
+- fw-b (`site-b.php`) y WAN A↔B (`wan-ab.inc.php`): 2 túneles IPsec VTI (ISP1 coste 10 / ISP2 coste 20) + OSPF (os-frr instalado en los 3 FW).
+- **Acceso de administración por SSH con clave** (`secrets/acc_admin_ed25519`, fuera de git; la pública se instala con `set-root-key.php`). Ejecutar en un FW: `bash scripts/fw.sh fw-a1|fw-a2|fw-a|fw-b '<comandos sh>'` (salta por adm-pc / adm-pc-b).
+- Contraseña de root desde `.env` (`scripts/opnsense-root-hash.sh` + `set-root-pass.php`): la de fábrica ya no sirve. **La consola serie pide esa contraseña: usar SSH.**
+- Reaplicar config de un FW (idempotente): regenerar `config/opnsense/ipsec.psk` desde `.env` (el FW lo borra al leerlo) y luego `bash scripts/fw.sh fw-b "B=http://192.168.122.1:8088; for f in site-b.php wan-ab.inc.php ipsec.psk; do fetch -qo /root/\$f \$B/\$f; done; cd /usr/local/opnsense/mvc && php /root/site-b.php; configctl filter reload"`. Requiere el servidor HTTP del host (`python3 -m http.server 8088 --bind 192.168.122.1` en `config/opnsense/`).
+
+## Errores conocidos / gotchas (F3)
+- Ver docs/pruebas/F3-site-b-wan.md (5 errores de OPNsense 26.7 con IPsec/OSPF y su solución).
+- Failover de fw-a1 con túneles: ≈ 36 s hasta recuperar A↔B (DPD). Aceptable; mejora: DPD 2 s/6 s.
+
+## Siguiente paso (F4)
+dc1 (10.10.20.10, sw-a1/sw-a2 eth4, bond ARP → 10.10.20.1) y dc2 (10.20.20.10, sw-b1 eth4) con `acc/samba-dc`: provisionar el dominio `ad.alcaldia.lab` en dc1, unir dc2 como DC adicional (réplica + DNS secundario). DHCP en OPNsense (dnsmasq) para VLAN 40/50. Prueba RQ-05: cambio de contraseña en dc1 visible en dc2 en menos de 15 min.

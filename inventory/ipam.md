@@ -62,10 +62,11 @@ DHCP: Kea en OPNsense (VLAN 40/50 en A y en B); en sedes, dnsmasq del kit. DNS: 
 | ISP1 ↔ Site A (WAN1) | 203.0.113.0/29 | .1 ISP1, .2 FW-A1, .3 FW-A2, **.4 VIP CARP** |
 | ISP2 ↔ Site A (WAN2) | 198.51.100.0/29 | .1 ISP2, .2 FW-A1, .3 FW-A2, **.4 VIP CARP** |
 | ISP1 ↔ Site B (WAN1) | 203.0.113.8/30 | .9 ISP1, .10 FW-B |
+| PFSYNC A | 10.10.99.0/29 | .1 fw-a1, .2 fw-a2 (también router-id OSPF) |
 | ISP2 ↔ Site B (WAN2) | 198.51.100.8/30 | .9 ISP2, .10 FW-B |
 | ISP1 ↔ sede 1 / sede 3 | 100.64.1.0/30, 100.64.3.0/30 | .1 ISP, .2 kit (CGNAT) |
 | ISP2 ↔ sede 2 | 100.64.2.0/30 | .1 ISP, .2 kit (CGNAT) |
-| VTI A↔B por ISP1 / ISP2 | 172.16.0.0/30, 172.16.0.4/30 | .1/.5 A, .2/.6 B |
+| VTI A↔B por ISP1 / ISP2 | 172.16.0.0/30, 172.16.0.4/30 | .1/.5 A (ipsec1/ipsec2 = opt8/opt9), .2/.6 B; IKE entre VIP A (203.0.113.4 / 198.51.100.4) y B (.10) |
 | VTI sede N → A (WAN1) | 172.16.N.0/30 | .1 A, .2 kit |
 | VTI sede N → A (WAN2) | 172.16.N.4/30 | .5 A, .6 kit |
 | VTI sede N → B | 172.16.N.8/30 | .9 B, .10 kit |

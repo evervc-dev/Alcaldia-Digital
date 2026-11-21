@@ -7,6 +7,7 @@
  */
 require_once('script/load_phalcon.php');
 use OPNsense\Core\Config;
+require_once(__DIR__ . '/wan-ab.inc.php');
 
 $role = $argv[1] ?? '';
 if (!in_array($role, ['a1', 'a2'])) { fwrite(STDERR, "uso: php site-a.php a1|a2\n"); exit(1); }
@@ -60,6 +61,7 @@ foreach ($VLANS as $tag => [$ifn, $descr]) {
     $add_if($ifn, "vlan0.$tag", $descr, "10.10.$tag.$me", '24');
 }
 $add_if('opt7', 'vtnet3', 'PFSYNC', $my99, '29');
+wan_ab_interfaces($ifs);
 
 /* ---------- helpers de modelos ---------- */
 function reset_array($field) { foreach ($field->iterateItems() as $uuid => $item) { $field->del($uuid); } }
@@ -120,7 +122,7 @@ Config::getInstance()->save();
 
 /* ---------- Alias de puertos (las reglas no aceptan listas) ---------- */
 $al = new \OPNsense\Firewall\Alias();
-$want = ['PUERTOS_PUBLICADOS' => "80\n443\n8000\n8080\n9091", 'PUERTOS_WEB_DNS' => "53\n80\n443"];
+$want = ['PUERTOS_PUBLICADOS' => "80\n443\n8000\n8080\n9091", 'PUERTOS_WEB_DNS' => "53\n80\n443", 'PUERTOS_IKE' => "500\n4500"];
 foreach ($al->aliases->alias->iterateItems() as $uuid => $a) {
     if (isset($want[(string)$a->name])) { $al->aliases->alias->del($uuid); }
 }
@@ -149,7 +151,9 @@ $rule('lan',  'block', 'GESTION -> ADMIN bloqueado', ['destination_net' => 'opt4
 $rule('lan',  'pass', 'GESTION: gestión, NTP y actualizaciones', ['log' => '0']);
 $rule('opt2', 'pass', 'SERVIDORES -> GESTION (syslog/SNMP traps)', ['destination_net' => 'lan']);
 $rule('opt2', 'pass', 'SERVIDORES -> Internet (actualizaciones)', ['destination_net' => '10.0.0.0/8', 'destination_not' => '1', 'log' => '0']);
+$rule('opt2', 'pass', 'SERVIDORES -> otro sitio (réplicas)', ['destination_net' => '10.20.0.0/16', 'log' => '0']);
 $rule('opt2', 'block', 'SERVIDORES: resto bloqueado');
+wan_ab_rules($rule, 'a');
 $rule('opt3', 'pass', 'DMZ -> servicios publicados', ['destination_net' => 'opt2', 'protocol' => 'TCP', 'destination_port' => 'PUERTOS_PUBLICADOS']);
 $rule('opt3', 'pass', 'DMZ -> DNS interno', ['destination_net' => 'opt2', 'protocol' => 'TCP/UDP', 'destination_port' => '53']);
 $rule('opt3', 'pass', 'DMZ -> Internet (cloudflared)', ['destination_net' => '10.0.0.0/8', 'destination_not' => '1', 'log' => '0']);
@@ -173,6 +177,9 @@ Config::getInstance()->save();
 $cfg = Config::getInstance()->object();
 if (!isset($cfg->nat->outbound)) { $cfg->nat->addChild('outbound'); }
 $cfg->nat->outbound->mode = 'hybrid';
+
+/* ---------- WAN A<->B (IPsec VTI + OSPF) ---------- */
+wan_ab_apply('a', $my99, ['lan', 'opt2', 'opt3', 'opt4', 'opt5', 'opt6']);
 
 /* ---------- HA: pfsync ---------- */
 $ha = new \OPNsense\Core\Hasync();
