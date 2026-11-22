@@ -45,7 +45,7 @@ for f in sorted(src.iterdir()):
     (dst / f.name).write_text(t)
 PY
 # Guardia: ningún valor del .env puede aparecer en configs/
-fuga=0; while IFS='=' read -r k v; do v=${v//\'/}; [ ${#v} -ge 10 ] || continue
+fuga=0; while IFS='=' read -r k v; do v=${v//\'/}; [ ${#v} -ge 10 ] || continue; case $k in CF_ZONE|GNS3_USER) continue ;; esac   # valores públicos
   grep -rqF -- "$v" configs/ && { echo "¡SECRETO $k encontrado en configs/! (no hacer commit)"; fuga=1; }
 done < <(grep -E '^[A-Z_]+=.+' .env)
 [ $fuga = 0 ] && echo "saneada -> configs/ ($(ls configs | wc -l) archivos, sin secretos del .env). Ahora: git add configs && git commit"
