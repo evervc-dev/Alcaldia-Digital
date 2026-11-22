@@ -5,4 +5,5 @@
 sleep 2
 swanctl --load-all >/dev/null 2>&1 || echo "[acc] swanctl: sin configuración todavía"
 ls /etc/dnsmasq.d/*.conf >/dev/null 2>&1 && dnsmasq --conf-dir=/etc/dnsmasq.d,*.conf
+/opt/acc/vigia-tuneles.sh &   # relanza túneles caídos (p. ej. NO_PROPOSAL_CHOSEN al arrancar)
 true

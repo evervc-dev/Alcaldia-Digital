@@ -124,3 +124,11 @@ Zabbix: zbx-db (acc/pg), zbx-server y zbx-web (oficiales) en SERVIDORES A; agent
 
 ## Siguiente paso (F9)
 restic: homes de ts1, archivo y dumps del portal → nas-a (bucket con Object Lock), replicado a nas-b; `scripts/backup-configs.sh` (config.xml de OPNsense, OVS, FRR, swanctl) → `configs/` en git; cinta LTO simulada (contenedor `tape` detenido); alerta en Zabbix si el último respaldo tiene > 26 h.
+
+## Incidente tras reiniciar el PC (22/11 ~21:30 local) — resuelto
+`lab-check` dio 7 fallos. Causas y arreglos permanentes:
+1. **Tunables `net.enc.*.ipsec_filter_mask=0` nunca se habían guardado:** en OPNsense 26.7 son entradas *estáticas* del modelo (clave md5) que no se serializan. Solo valían en caliente y al reiniciar volvieron a 2/1, así que enc0 descartaba el tráfico A↔B (OSPF seguía Full, pero sin datos). Arreglo en `wan-ab.inc.php`: crear una entrada propia (uuid). Verificado reiniciando fw-b: ahora persiste.
+2. **Sedes con 1 túnel:** los kits arrancan antes que fw-a y reciben `NO_PROPOSAL_CHOSEN`, ante el que strongSwan no reintenta. Arreglo: `/opt/acc/vigia-tuneles.sh` en la imagen del kit relanza cada 30 s lo que no esté ESTABLISHED.
+3. **Réplica del portal > RPO** tras el corte: ahora `acc/pg` reintenta a los 5 min si la copia falla. Copia manual: el bucle de `images/pg/rootfs/opt/acc/entrypoint.sh` ejecutado a mano en portal-db-b.
+4. **Réplica AD con fallos acumulados:** `docker exec -e AP=... GNS3.dc2.<id> samba-tool drs replicate dc2 dc1 <NC> -U "administrator%$AP"` para los 5 NC (DomainDnsZones, ForestDnsZones, dominio, Configuration, Schema).
+- Gotcha: no usar `pkill -f "http.server 8088"` desde un `bash -c` que contenga esa cadena (se mata a sí mismo, exit 144).

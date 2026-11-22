@@ -111,7 +111,9 @@ function wan_ab_apply($side, $routerid, $passive) {
     $tun = new \OPNsense\Core\Tunables();
     foreach (['net.enc.in.ipsec_filter_mask' => '0', 'net.enc.out.ipsec_filter_mask' => '0'] as $k => $v) {
         $node = null;
-        foreach ($tun->item->iterateItems() as $it) { if ((string)$it->tunable === $k) { $node = $it; } }
+        // OJO (26.7): los tunables conocidos (net.enc.*) aparecen como entradas ESTÁTICAS (clave = md5 del nombre) que
+        // NUNCA se guardan en config.xml; hay que crear/usar una entrada propia (uuid) para que persista al reiniciar.
+        foreach ($tun->item->iterateItems() as $key => $it) { if ((string)$it->tunable === $k && $key !== md5($k)) { $node = $it; } }
         if (!$node) { $node = $tun->item->Add(); }
         $node->setNodes(['tunable' => $k, 'value' => $v, 'descr' => 'ACC: filtrar IPsec solo en las VTI']);
         exec('/sbin/sysctl ' . escapeshellarg("$k=$v"));
