@@ -1,0 +1,2 @@
+# Política de horario laboral (config/politicas/horario.conf): si no corresponde, muestra el motivo y cierra la sesión.
+/opt/acc/horario.sh || exit 0

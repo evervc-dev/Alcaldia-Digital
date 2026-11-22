@@ -123,7 +123,7 @@ Config::getInstance()->save();
 
 /* ---------- Alias de puertos (las reglas no aceptan listas) ---------- */
 $al = new \OPNsense\Firewall\Alias();
-$want = ['PUERTOS_PUBLICADOS' => "80\n443\n8000\n8080\n9091\n9200", 'PUERTOS_WEB_DNS' => "53\n80\n443", 'PUERTOS_IKE' => "500\n4500", 'PUERTOS_AD' => "53\n88\n389\n636", 'PUERTOS_RDP' => "3389", 'PUERTOS_SEDE' => "53\n3389"];
+$want = ['PUERTOS_PUBLICADOS' => "80\n443\n8000\n8080\n9091\n9200", 'PUERTOS_WEB_DNS' => "53\n80\n443", 'PUERTOS_IKE' => "500\n4500", 'PUERTOS_AD' => "53\n88\n389\n636", 'PUERTOS_RDP' => "3389", 'PUERTOS_SEDE' => "53\n3389", 'PUERTOS_AD_CLIENTE' => "53\n88\n123\n135\n389\n445\n464\n636\n3268\n3269\n49152:65535"];
 foreach ($al->aliases->alias->iterateItems() as $uuid => $a) {
     if (isset($want[(string)$a->name])) { $al->aliases->alias->del($uuid); }
 }
@@ -162,6 +162,7 @@ $rule('opt3', 'pass', 'DMZ -> DNS Site B', ['destination_net' => '10.20.20.0/24'
 $rule('opt3', 'pass', 'WARP (cloudflared-a) -> escritorios ts1 RDP', ['source_net' => '10.10.30.11/32', 'destination_net' => '10.10.20.40/32', 'protocol' => 'TCP', 'destination_port' => 'PUERTOS_RDP']);
 $rule('opt3', 'pass', 'DMZ -> Internet (cloudflared)', ['destination_net' => '10.0.0.0/8', 'destination_not' => '1', 'log' => '0']);
 $rule('opt3', 'block', 'DMZ: resto bloqueado');
+foreach (['10.10.20.10/32', '10.20.20.10/32'] as $dc) { $rule('opt5', 'pass', "USUARIOS -> AD (puestos unidos al dominio) $dc", ['destination_net' => $dc, 'protocol' => 'TCP/UDP', 'destination_port' => 'PUERTOS_AD_CLIENTE', 'log' => '0']); }
 $rule('opt5', 'pass', 'USUARIOS -> escritorios (ts1 RDP)', ['destination_net' => '10.10.20.40/32', 'protocol' => 'TCP', 'destination_port' => 'PUERTOS_RDP']);
 $rule('opt5', 'pass', 'USUARIOS -> servicios web y DNS', ['destination_net' => 'opt2', 'protocol' => 'TCP/UDP', 'destination_port' => 'PUERTOS_WEB_DNS']);
 $rule('opt5', 'pass', 'USUARIOS -> servicios del Site B (DNS secundario / DR)', ['destination_net' => '10.20.20.0/24', 'protocol' => 'TCP/UDP', 'destination_port' => 'PUERTOS_WEB_DNS']);

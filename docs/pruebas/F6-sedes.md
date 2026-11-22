@@ -27,3 +27,14 @@ En los sitios: VTI `ipsec1N`/`ipsec2N` (A) e `ipsec3N` (B); reglas: OSPF, DNS (5
 - CGNAT compartido: un mismo IP público para dos sedes impediría distinguir sus túneles por dirección → **pool CGNAT** (una IP pública por sede).
 - OSPF en `ExStart`: MTU distinta (XFRM 1500 vs VTI OPNsense 1400) → MTU 1400 en el kit + `ip ospf mtu-ignore`.
 - Sin túneles, el tráfico al CD salía por la ruta por defecto (Internet) → ruta *blackhole* 10.0.0.0/8 (métrica 250) en el kit.
+
+## Puesto de funcionario unido al dominio (puesto-01, Sede 1)
+Imagen `acc/puesto-linux` (Debian 13 + XFCE + winbind + LightDM sobre el display VNC de GNS3). Firewall: desde las sedes y USUARIOS solo hacia dc1/dc2 los puertos de cliente de AD (`PUERTOS_AD_CLIENTE`: 53, 88, 123, 135, 389, 445, 464, 636, 3268-3269, 49152-65535); el resto de servidores sigue cerrado.
+
+| # | Prueba | Resultado |
+|---|---|---|
+| P1 | Unión al dominio a través del túnel de la sede (`net ads join`) | ✅ `Joined 'PUESTO-01' to dns domain 'ad.alcaldia.lab'` |
+| P2 | Pantalla de login gráfica | ✅ img/F6-puesto-login.png |
+| P3 | Login de tecnico.soporte con su cuenta del AD | ✅ escritorio XFCE, home `/home/ALCALDIA/tecnico.soporte` creado (img/F6-puesto-escritorio-dominio.png) |
+| P4 | Login de ana.funcionaria fuera de horario | ✅ ventana con el motivo, registro y cierre de sesión; vuelve el login (img/F6-puesto-fuera-de-horario.png) |
+| P5 | Puertos de AD solo hacia los DC | ✅ dc1/dc2 abiertos; ts1:445 bloqueado |

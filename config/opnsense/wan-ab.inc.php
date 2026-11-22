@@ -69,6 +69,9 @@ function wan_ab_rules($rule, $side) {
         $rule($wanif, 'pass', "$descr: IKE/NAT-T desde la sede", ['protocol' => 'UDP', 'source_net' => "$pub/32", 'destination_port' => 'PUERTOS_IKE', 'log' => '0']);
         $rule($wanif, 'pass', "$descr: ESP desde la sede", ['protocol' => 'ESP', 'source_net' => "$pub/32", 'log' => '0']);
         $rule($ifn, 'pass', "$descr: OSPF", ['protocol' => 'OSPF', 'log' => '0']);
+        foreach (['10.10.20.10/32', '10.20.20.10/32'] as $dc) {   // puestos unidos al dominio: SOLO hacia dc1/dc2
+            $rule($ifn, 'pass', "$descr: cliente AD -> $dc", ['protocol' => 'TCP/UDP', 'destination_net' => $dc, 'destination_port' => 'PUERTOS_AD_CLIENTE', 'log' => '0']);
+        }
         foreach (['10.10.20.0/24', '10.20.20.0/24'] as $net) {
             $rule($ifn, 'pass', "$descr: DNS/RDP a servidores $net", ['protocol' => 'TCP/UDP', 'destination_net' => $net, 'destination_port' => 'PUERTOS_SEDE', 'log' => '0']);
             $rule($ifn, 'pass', "$descr: ping a servidores $net", ['protocol' => 'ICMP', 'destination_net' => $net, 'log' => '0']);

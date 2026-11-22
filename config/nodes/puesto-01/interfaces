@@ -1,0 +1,3 @@
+# puesto-01: puesto de funcionario Debian 13 + XFCE unido al dominio (Sede 1, DHCP del kit)
+auto eth0
+iface eth0 inet dhcp

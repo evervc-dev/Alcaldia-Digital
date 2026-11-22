@@ -13,6 +13,6 @@ RUN apt-get update && apt-get install -y --no-install-recommends \
  && adduser xrdp ssl-cert \
  && mkdir -p /opt/acc/defaults && cp -a /etc/samba /opt/acc/defaults/samba
 COPY rootfs/ /
-RUN chmod +x /opt/acc/*.sh /etc/xrdp/startwm.sh
+RUN chmod +x /opt/acc/*.sh /etc/xrdp/startwm.sh && touch /var/log/acc-horario.log && chmod 622 /var/log/acc-horario.log
 VOLUME ["/home", "/var/lib/samba", "/etc/samba"]
 CMD ["/opt/acc/entrypoint.sh"]

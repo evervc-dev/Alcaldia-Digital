@@ -96,6 +96,7 @@
 **Puertos de sw-a1/sw-a2:** eth8 y eth10 tienen enlaces fantasma (no usar). Libres: eth0, eth2, eth21–eth23 (y eth5/eth18 en sw-a2). sw-b1 libres: eth0, eth2, eth13, eth14.
 
 ## Hecho en F6
+- **Puesto unido al dominio:** `puesto-01` (Debian 13 XFCE, LightDM, consola VNC) en la Sede 1: login con cuentas del AD y horario aplicado. Guía para el puesto Windows de la defensa: `docs/PUESTO-WINDOWS.md`.
 - 3 sedes con kit replicable (`new-sede.sh N` → `sede-setup.sh N`), túneles A-WAN1/A-WAN2/B con OSPF, pool CGNAT por sede, hub-and-spoke probado y failover sede→A-WAN2→B. `lab-check.sh` incluye las sedes.
 - Para añadir una sede N: `new-sede.sh N`, añadir su IP pública a `SEDES_PUB` (wan-ab.inc.php) y al snat del ISP, `opn-apply.sh` en los 3 FW, `ad-ou-delegacion.sh N`, crear nodos y `sede-setup.sh N`.
 

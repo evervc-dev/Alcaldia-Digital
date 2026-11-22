@@ -107,7 +107,7 @@ Config::getInstance()->save();
 
 /* ---------- Alias de puertos (las reglas no aceptan listas) ---------- */
 $al = new \OPNsense\Firewall\Alias();
-$want = ['PUERTOS_PUBLICADOS' => "80\n443\n8000\n8080\n9091\n9200", 'PUERTOS_WEB_DNS' => "53\n80\n443", 'PUERTOS_IKE' => "500\n4500", 'PUERTOS_AD' => "53\n88\n389\n636", 'PUERTOS_RDP' => "3389", 'PUERTOS_SEDE' => "53\n3389"];
+$want = ['PUERTOS_PUBLICADOS' => "80\n443\n8000\n8080\n9091\n9200", 'PUERTOS_WEB_DNS' => "53\n80\n443", 'PUERTOS_IKE' => "500\n4500", 'PUERTOS_AD' => "53\n88\n389\n636", 'PUERTOS_RDP' => "3389", 'PUERTOS_SEDE' => "53\n3389", 'PUERTOS_AD_CLIENTE' => "53\n88\n123\n135\n389\n445\n464\n636\n3268\n3269\n49152:65535"];
 foreach ($al->aliases->alias->iterateItems() as $uuid => $a) {
     if (isset($want[(string)$a->name])) { $al->aliases->alias->del($uuid); }
 }
