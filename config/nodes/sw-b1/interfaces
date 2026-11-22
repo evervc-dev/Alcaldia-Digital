@@ -4,3 +4,5 @@ iface mgmt inet static
 	address 10.20.10.11
 	netmask 255.255.255.0
 	gateway 10.20.10.1
+	# T6 (F10): al reiniciar, el puerto mgmt cambia de MAC; se anuncia al gateway (si no, el FW tarda hasta 20 min en verlo)
+	post-up (sleep 3; ping -c 3 -W 1 10.20.10.1 >/dev/null 2>&1) &   # anuncia la MAC nueva

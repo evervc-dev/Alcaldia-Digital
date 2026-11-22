@@ -39,7 +39,7 @@ for t in "a-wan1 203.0.113.4 1" "a-wan2 198.51.100.4 2" "b 203.0.113.10 3"; do s
         remote_addrs = $2
         mobike = no
         keyingtries = 0
-        dpd_delay = 10s
+        dpd_delay = 5s
         local { auth = psk
                 id = kit-sede-$NN.alcaldia.lab }
         remote { auth = psk
