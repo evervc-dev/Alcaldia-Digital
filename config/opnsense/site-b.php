@@ -32,7 +32,10 @@ $cfg->system->gw_switch_default = '1';               // conmuta la ruta por defe
 if (!isset($cfg->system->ssh)) { $cfg->system->addChild('ssh'); }
 $cfg->system->ssh->enabled = 'enabled';
 $cfg->system->ssh->permitrootlogin = '1';
-$cfg->system->ssh->passwordauth = '1';
+$cfg->system->ssh->passwordauth = '0';               // T5 (F10): solo clave (la administración usa la clave de adm-pc)
+$cfg->system->ssh->interfaces = 'lan,opt4';          // T5: SSH solo en GESTION y ADMIN
+if (!isset($cfg->system->webgui)) { $cfg->system->addChild('webgui'); }
+$cfg->system->webgui->interfaces = 'lan,opt4';       // T5: GUI solo en GESTION y ADMIN
 unset($cfg->trigger_initial_wizard);
 
 /* ---------- interfaces (legacy) ---------- */

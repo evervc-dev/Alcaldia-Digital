@@ -108,6 +108,9 @@ table ip filter {
   chain forward {
     type filter hook forward priority 0; policy accept;
     tcp flags syn tcp option maxseg size set rt mtu    # MSS ajustado a la MTU de los túneles
+    # T5 (F10): la sede no necesita NADA de GESTION, ADMIN, DMZ, RESPALDO ni de las IP de los firewalls (su DNS es dc1/dc2).
+    # pf de OPNsense no filtra lo que llega por la VTI con destino al propio firewall -> se corta aquí (OSPF del kit no pasa por forward).
+    ip daddr { 10.10.10.0/24, 10.10.30.0/24, 10.10.40.0/24, 10.10.60.0/24, 10.20.10.0/24, 10.20.30.0/24, 10.20.40.0/24, 10.20.60.0/24, 172.16.0.0/16, 10.10.20.1-10.10.20.3, 10.10.50.1-10.10.50.3, 10.20.20.1 } counter drop
   }
 }
 EOF3

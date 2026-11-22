@@ -68,6 +68,8 @@ function wan_ab_rules($rule, $side) {
     foreach (sede_tunnels($side) as [$reqid, $ifn, $descr, $lo, $pub, , , , , $wanif]) {
         $rule($wanif, 'pass', "$descr: IKE/NAT-T desde la sede", ['protocol' => 'UDP', 'source_net' => "$pub/32", 'destination_port' => 'PUERTOS_IKE', 'log' => '0']);
         $rule($wanif, 'pass', "$descr: ESP desde la sede", ['protocol' => 'ESP', 'source_net' => "$pub/32", 'log' => '0']);
+        // T5 (F10): una sede no debe alcanzar SSH/GUI del propio firewall (hallado: sin esta regla SSH respondía)
+        $rule($ifn, 'block', "$descr: nada hacia el propio firewall (SSH/GUI)", ['protocol' => 'TCP', 'destination_net' => '(self)']);
         $rule($ifn, 'pass', "$descr: OSPF", ['protocol' => 'OSPF', 'log' => '0']);
         foreach (['10.10.20.10/32', '10.20.20.10/32'] as $dc) {   // puestos unidos al dominio: SOLO hacia dc1/dc2
             $rule($ifn, 'pass', "$descr: cliente AD -> $dc", ['protocol' => 'TCP/UDP', 'destination_net' => $dc, 'destination_port' => 'PUERTOS_AD_CLIENTE', 'log' => '0']);
