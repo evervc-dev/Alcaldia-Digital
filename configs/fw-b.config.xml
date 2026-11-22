@@ -46,6 +46,7 @@
     <webgui>
       <protocol>https</protocol>
       <ssl-certref>6b01e7488e7e2</ssl-certref>
+      <interfaces>lan,opt4</interfaces>
     </webgui>
     <disablenatreflection>yes</disablenatreflection>
     <usevirtualterminal>1</usevirtualterminal>
@@ -62,7 +63,8 @@
       <group>admins</group>
       <enabled>enabled</enabled>
       <permitrootlogin>1</permitrootlogin>
-      <passwordauth>1</passwordauth>
+      <passwordauth>0</passwordauth>
+      <interfaces>lan,opt4</interfaces>
     </ssh>
     <firmware version="1.0.1" persisted_at="1795286845.69" description="Firmware settings">
       <mirror/>
@@ -77,7 +79,7 @@
     <dnsserver>1.1.1.1</dnsserver>
     <dnsserver>8.8.8.8</dnsserver>
   </system>
-  <dnsmasq version="1.0.9" persisted_at="1795321295.56" description="Dnsmasq DNS and DHCP">
+  <dnsmasq version="1.0.9" persisted_at="1795326078.77" description="Dnsmasq DNS and DHCP">
     <enable>1</enable>
     <regdhcp>0</regdhcp>
     <regdhcpstatic>0</regdhcpstatic>
@@ -115,7 +117,7 @@
       <log_quiet>0</log_quiet>
     </dhcp>
     <no_ident>1</no_ident>
-    <dhcp_ranges uuid="39725af5-fecd-4862-9ab6-26114dc66e83">
+    <dhcp_ranges uuid="cb80d1a8-67a8-4921-9f1e-7e0589db481a">
       <interface>opt4</interface>
       <set_tag/>
       <start_addr>10.20.40.100</start_addr>
@@ -135,7 +137,7 @@
       <ra_router_lifetime/>
       <description>DHCP opt4</description>
     </dhcp_ranges>
-    <dhcp_options uuid="bfcab9ed-7163-4d90-be68-2c192e8f2649">
+    <dhcp_options uuid="2925f637-ee68-4fbc-b8d6-f81cb6e64a32">
       <type>set</type>
       <option>3</option>
       <option6/>
@@ -146,7 +148,7 @@
       <force>0</force>
       <description>router = VIP/gateway del sitio</description>
     </dhcp_options>
-    <dhcp_options uuid="99cbf79b-d839-4b5a-a77e-30333fd255ea">
+    <dhcp_options uuid="70815c07-5072-43b5-a17e-3e368c135e43">
       <type>set</type>
       <option>6</option>
       <option6/>
@@ -171,10 +173,10 @@
   </ntpd>
   <OPNsense>
     <Firewall>
-      <Filter version="1.0.5" persisted_at="1795321295.54" description="Firewall rules (new)">
+      <Filter version="1.0.5" persisted_at="1795326078.75" description="Firewall rules (new)">
         <general/>
         <rules>
-          <rule uuid="c90a5d1e-157c-409c-a22a-c57a702f32b4">
+          <rule uuid="d062ca8f-be6a-4f80-8f3f-632954973cb1">
             <enabled>1</enabled>
             <statetype>keep</statetype>
             <state-policy/>
@@ -230,7 +232,7 @@
             <shaper2/>
             <description>ADMIN: acceso total (personal del centro)</description>
           </rule>
-          <rule uuid="0cb2ac7c-dec0-4f1a-bed5-39b42a501249">
+          <rule uuid="1be69eb7-a136-42cc-901e-35f7acdfd633">
             <enabled>1</enabled>
             <statetype>keep</statetype>
             <state-policy/>
@@ -286,7 +288,7 @@
             <shaper2/>
             <description>GESTION -&gt; ADMIN bloqueado</description>
           </rule>
-          <rule uuid="8f4f6501-d205-4cfe-9f8f-e8eece7c0a6d">
+          <rule uuid="58a1a3cf-8687-46ab-888a-25e4c4602461">
             <enabled>1</enabled>
             <statetype>keep</statetype>
             <state-policy/>
@@ -342,7 +344,7 @@
             <shaper2/>
             <description>GESTION: gesti&#xF3;n, NTP y actualizaciones</description>
           </rule>
-          <rule uuid="1f35537d-6113-4f75-8526-d787893fb158">
+          <rule uuid="1d23c7eb-5578-40bd-8f3a-eb1947b7440d">
             <enabled>1</enabled>
             <statetype>keep</statetype>
             <state-policy/>
@@ -398,7 +400,7 @@
             <shaper2/>
             <description>SERVIDORES -&gt; GESTION (syslog/SNMP traps)</description>
           </rule>
-          <rule uuid="f800e7e5-13a4-43fd-bc87-264328f8ed55">
+          <rule uuid="16a5abf9-adab-44de-9e18-17959b08ddca">
             <enabled>1</enabled>
             <statetype>keep</statetype>
             <state-policy/>
@@ -454,7 +456,7 @@
             <shaper2/>
             <description>SERVIDORES -&gt; Internet (actualizaciones)</description>
           </rule>
-          <rule uuid="d49b0714-3bed-4068-a5ae-ac2bbbee4548">
+          <rule uuid="bed72305-6281-4c78-9637-c3ebbf261c4f">
             <enabled>1</enabled>
             <statetype>keep</statetype>
             <state-policy/>
@@ -510,7 +512,7 @@
             <shaper2/>
             <description>SERVIDORES -&gt; otro sitio (r&#xE9;plicas)</description>
           </rule>
-          <rule uuid="4bdd04b2-e125-4d0b-9ddf-0e85adfa22a4">
+          <rule uuid="f418021e-042f-49dd-83c5-2b1c7b93597d">
             <enabled>1</enabled>
             <statetype>keep</statetype>
             <state-policy/>
@@ -566,7 +568,7 @@
             <shaper2/>
             <description>RESPALDO: clientes restic -&gt; NAS (API S3)</description>
           </rule>
-          <rule uuid="7e0f6a6d-2f23-4e1e-aa3c-10e0da6d2db6">
+          <rule uuid="8f2744b2-e8ba-4ee2-8f5b-b98735958595">
             <enabled>1</enabled>
             <statetype>keep</statetype>
             <state-policy/>
@@ -622,7 +624,7 @@
             <shaper2/>
             <description>SERVIDORES: resto bloqueado</description>
           </rule>
-          <rule uuid="b3645346-b0a9-40e7-a98d-74a54e9b0b1a">
+          <rule uuid="01646be3-3a31-491e-b553-4f268aa9afaf">
             <enabled>1</enabled>
             <statetype>keep</statetype>
             <state-policy/>
@@ -678,7 +680,7 @@
             <shaper2/>
             <description>VTI_ISP1: IKE/NAT-T desde el par</description>
           </rule>
-          <rule uuid="811ef308-34e5-452d-95bf-aa83f83a7a67">
+          <rule uuid="6735ba56-ede5-4043-b359-37d30901bbac">
             <enabled>1</enabled>
             <statetype>keep</statetype>
             <state-policy/>
@@ -734,7 +736,7 @@
             <shaper2/>
             <description>VTI_ISP1: ESP desde el par</description>
           </rule>
-          <rule uuid="f32a4f15-6477-413c-8895-64b18d466250">
+          <rule uuid="1f329d9f-1f09-41c6-a01e-66ec7bde6a69">
             <enabled>1</enabled>
             <statetype>keep</statetype>
             <state-policy/>
@@ -790,7 +792,7 @@
             <shaper2/>
             <description>VTI_ISP1: tr&#xE1;fico entre sitios y OSPF</description>
           </rule>
-          <rule uuid="ac58ce12-1c92-4e50-9e20-b15e9fc3236a">
+          <rule uuid="81e93de4-6193-447b-a53d-00fbd148c6cb">
             <enabled>1</enabled>
             <statetype>keep</statetype>
             <state-policy/>
@@ -846,7 +848,7 @@
             <shaper2/>
             <description>VTI_ISP2: IKE/NAT-T desde el par</description>
           </rule>
-          <rule uuid="f012714f-dd50-487d-869f-53e240f0a016">
+          <rule uuid="32fc5064-dab9-407e-bcc2-6bfb3296230d">
             <enabled>1</enabled>
             <statetype>keep</statetype>
             <state-policy/>
@@ -902,7 +904,7 @@
             <shaper2/>
             <description>VTI_ISP2: ESP desde el par</description>
           </rule>
-          <rule uuid="22a8085c-f19c-4ee0-bc0c-6133cf062091">
+          <rule uuid="9c52c14f-2d75-470f-93cc-4a4d7d36e2bd">
             <enabled>1</enabled>
             <statetype>keep</statetype>
             <state-policy/>
@@ -958,7 +960,7 @@
             <shaper2/>
             <description>VTI_ISP2: tr&#xE1;fico entre sitios y OSPF</description>
           </rule>
-          <rule uuid="cfa6bced-0ca1-458e-b76c-f974f1d0cf12">
+          <rule uuid="212d0760-d13b-46a1-ad89-691847175b3b">
             <enabled>1</enabled>
             <statetype>keep</statetype>
             <state-policy/>
@@ -1014,7 +1016,7 @@
             <shaper2/>
             <description>SEDE01: IKE/NAT-T desde la sede</description>
           </rule>
-          <rule uuid="3dcb7548-723a-4f9d-8d7d-98c3bf63bf1a">
+          <rule uuid="b06d535b-1092-42da-b219-acf5a8fedfd3">
             <enabled>1</enabled>
             <statetype>keep</statetype>
             <state-policy/>
@@ -1070,11 +1072,67 @@
             <shaper2/>
             <description>SEDE01: ESP desde la sede</description>
           </rule>
-          <rule uuid="e97e0e84-37cd-40de-bde4-022ff3c7c798">
+          <rule uuid="06f649c2-fdb3-4a93-9119-7f103e320ae3">
             <enabled>1</enabled>
             <statetype>keep</statetype>
             <state-policy/>
             <sequence>170</sequence>
+            <action>block</action>
+            <quick>1</quick>
+            <interfacenot>0</interfacenot>
+            <interface>opt10</interface>
+            <direction>in</direction>
+            <ipprotocol>inet</ipprotocol>
+            <protocol>TCP</protocol>
+            <icmptype/>
+            <icmp6type/>
+            <source_net>any</source_net>
+            <source_not>0</source_not>
+            <source_port/>
+            <destination_net>(self)</destination_net>
+            <destination_not>0</destination_not>
+            <destination_port/>
+            <divert-to/>
+            <gateway/>
+            <replyto/>
+            <disablereplyto>0</disablereplyto>
+            <log>1</log>
+            <allowopts>0</allowopts>
+            <nosync>0</nosync>
+            <nopfsync>0</nopfsync>
+            <statetimeout/>
+            <udp-first/>
+            <udp-multiple/>
+            <udp-single/>
+            <max-src-nodes/>
+            <max-src-states/>
+            <max-src-conn/>
+            <max/>
+            <max-src-conn-rate/>
+            <max-src-conn-rates/>
+            <overload/>
+            <adaptivestart/>
+            <adaptiveend/>
+            <prio/>
+            <set-prio/>
+            <set-prio-low/>
+            <tag/>
+            <tagged/>
+            <tcpflags1/>
+            <tcpflags2/>
+            <tcpflags_any>0</tcpflags_any>
+            <categories/>
+            <sched/>
+            <tos/>
+            <shaper1/>
+            <shaper2/>
+            <description>SEDE01: nada hacia el propio firewall (SSH/GUI)</description>
+          </rule>
+          <rule uuid="1762de20-25c6-4133-b221-0d35711961b5">
+            <enabled>1</enabled>
+            <statetype>keep</statetype>
+            <state-policy/>
+            <sequence>180</sequence>
             <action>pass</action>
             <quick>1</quick>
             <interfacenot>0</interfacenot>
@@ -1126,11 +1184,11 @@
             <shaper2/>
             <description>SEDE01: OSPF</description>
           </rule>
-          <rule uuid="a0e93c4b-dc2e-4ce1-835c-7f0f057979f2">
+          <rule uuid="7dd4dba4-33b6-4dae-8e0c-d014d29f65e0">
             <enabled>1</enabled>
             <statetype>keep</statetype>
             <state-policy/>
-            <sequence>180</sequence>
+            <sequence>190</sequence>
             <action>pass</action>
             <quick>1</quick>
             <interfacenot>0</interfacenot>
@@ -1182,11 +1240,11 @@
             <shaper2/>
             <description>SEDE01: cliente AD -&gt; 10.10.20.10/32</description>
           </rule>
-          <rule uuid="367cbd0e-e9fa-4009-919e-3c4c508cf610">
+          <rule uuid="0957d894-54c2-49fb-8718-49567bc9c595">
             <enabled>1</enabled>
             <statetype>keep</statetype>
             <state-policy/>
-            <sequence>190</sequence>
+            <sequence>200</sequence>
             <action>pass</action>
             <quick>1</quick>
             <interfacenot>0</interfacenot>
@@ -1238,11 +1296,11 @@
             <shaper2/>
             <description>SEDE01: cliente AD -&gt; 10.20.20.10/32</description>
           </rule>
-          <rule uuid="a94971f4-cd95-45e2-be43-0f4c46781a4f">
+          <rule uuid="0a618938-fb24-4a57-aeb9-688450cf9b87">
             <enabled>1</enabled>
             <statetype>keep</statetype>
             <state-policy/>
-            <sequence>200</sequence>
+            <sequence>210</sequence>
             <action>pass</action>
             <quick>1</quick>
             <interfacenot>0</interfacenot>
@@ -1294,11 +1352,11 @@
             <shaper2/>
             <description>SEDE01: DNS/RDP a servidores 10.10.20.0/24</description>
           </rule>
-          <rule uuid="9074c938-50be-4a9e-b557-0fb2485d4188">
+          <rule uuid="b4c52148-5575-4e02-90ff-71315e3a7d10">
             <enabled>1</enabled>
             <statetype>keep</statetype>
             <state-policy/>
-            <sequence>210</sequence>
+            <sequence>220</sequence>
             <action>pass</action>
             <quick>1</quick>
             <interfacenot>0</interfacenot>
@@ -1350,11 +1408,11 @@
             <shaper2/>
             <description>SEDE01: ping a servidores 10.10.20.0/24</description>
           </rule>
-          <rule uuid="6c243962-5441-43de-ba88-b639c96205c7">
+          <rule uuid="da43e17f-3dc1-4f56-8db2-c95385c97613">
             <enabled>1</enabled>
             <statetype>keep</statetype>
             <state-policy/>
-            <sequence>220</sequence>
+            <sequence>230</sequence>
             <action>pass</action>
             <quick>1</quick>
             <interfacenot>0</interfacenot>
@@ -1406,11 +1464,11 @@
             <shaper2/>
             <description>SEDE01: DNS/RDP a servidores 10.20.20.0/24</description>
           </rule>
-          <rule uuid="7fc273ed-d701-427a-98ba-24518aaf02a7">
+          <rule uuid="38495397-53d4-4559-ac91-0291b8981251">
             <enabled>1</enabled>
             <statetype>keep</statetype>
             <state-policy/>
-            <sequence>230</sequence>
+            <sequence>240</sequence>
             <action>pass</action>
             <quick>1</quick>
             <interfacenot>0</interfacenot>
@@ -1462,11 +1520,11 @@
             <shaper2/>
             <description>SEDE01: ping a servidores 10.20.20.0/24</description>
           </rule>
-          <rule uuid="a1845cf6-40d9-4d63-816e-f1bc611edab0">
+          <rule uuid="f2b48abc-a62f-4107-b096-96da9374490d">
             <enabled>1</enabled>
             <statetype>keep</statetype>
             <state-policy/>
-            <sequence>240</sequence>
+            <sequence>250</sequence>
             <action>block</action>
             <quick>1</quick>
             <interfacenot>0</interfacenot>
@@ -1518,11 +1576,11 @@
             <shaper2/>
             <description>SEDE01: resto bloqueado (hub-and-spoke)</description>
           </rule>
-          <rule uuid="d8ed04a2-9575-455e-8f06-119776a657dd">
+          <rule uuid="bf6cf83f-d250-43a8-a421-61bed58050df">
             <enabled>1</enabled>
             <statetype>keep</statetype>
             <state-policy/>
-            <sequence>250</sequence>
+            <sequence>260</sequence>
             <action>pass</action>
             <quick>1</quick>
             <interfacenot>0</interfacenot>
@@ -1574,11 +1632,11 @@
             <shaper2/>
             <description>SEDE02: IKE/NAT-T desde la sede</description>
           </rule>
-          <rule uuid="1d520dd9-187b-494d-8439-94c436e4eab2">
+          <rule uuid="3a642da9-3ff7-41f3-b8dc-5b1be337cd44">
             <enabled>1</enabled>
             <statetype>keep</statetype>
             <state-policy/>
-            <sequence>260</sequence>
+            <sequence>270</sequence>
             <action>pass</action>
             <quick>1</quick>
             <interfacenot>0</interfacenot>
@@ -1630,11 +1688,67 @@
             <shaper2/>
             <description>SEDE02: ESP desde la sede</description>
           </rule>
-          <rule uuid="3061767e-1a06-493e-8970-b203a234cee4">
+          <rule uuid="2aabed7e-4540-4419-927b-c7969b5469d7">
             <enabled>1</enabled>
             <statetype>keep</statetype>
             <state-policy/>
-            <sequence>270</sequence>
+            <sequence>280</sequence>
+            <action>block</action>
+            <quick>1</quick>
+            <interfacenot>0</interfacenot>
+            <interface>opt11</interface>
+            <direction>in</direction>
+            <ipprotocol>inet</ipprotocol>
+            <protocol>TCP</protocol>
+            <icmptype/>
+            <icmp6type/>
+            <source_net>any</source_net>
+            <source_not>0</source_not>
+            <source_port/>
+            <destination_net>(self)</destination_net>
+            <destination_not>0</destination_not>
+            <destination_port/>
+            <divert-to/>
+            <gateway/>
+            <replyto/>
+            <disablereplyto>0</disablereplyto>
+            <log>1</log>
+            <allowopts>0</allowopts>
+            <nosync>0</nosync>
+            <nopfsync>0</nopfsync>
+            <statetimeout/>
+            <udp-first/>
+            <udp-multiple/>
+            <udp-single/>
+            <max-src-nodes/>
+            <max-src-states/>
+            <max-src-conn/>
+            <max/>
+            <max-src-conn-rate/>
+            <max-src-conn-rates/>
+            <overload/>
+            <adaptivestart/>
+            <adaptiveend/>
+            <prio/>
+            <set-prio/>
+            <set-prio-low/>
+            <tag/>
+            <tagged/>
+            <tcpflags1/>
+            <tcpflags2/>
+            <tcpflags_any>0</tcpflags_any>
+            <categories/>
+            <sched/>
+            <tos/>
+            <shaper1/>
+            <shaper2/>
+            <description>SEDE02: nada hacia el propio firewall (SSH/GUI)</description>
+          </rule>
+          <rule uuid="a58d6035-ddf1-4621-b81a-dd1deec067da">
+            <enabled>1</enabled>
+            <statetype>keep</statetype>
+            <state-policy/>
+            <sequence>290</sequence>
             <action>pass</action>
             <quick>1</quick>
             <interfacenot>0</interfacenot>
@@ -1686,11 +1800,11 @@
             <shaper2/>
             <description>SEDE02: OSPF</description>
           </rule>
-          <rule uuid="890a7b88-8944-46d6-bb7c-b26eb1d5400b">
+          <rule uuid="cb7298f8-2400-42cf-963c-2f7ba8f6e687">
             <enabled>1</enabled>
             <statetype>keep</statetype>
             <state-policy/>
-            <sequence>280</sequence>
+            <sequence>300</sequence>
             <action>pass</action>
             <quick>1</quick>
             <interfacenot>0</interfacenot>
@@ -1742,11 +1856,11 @@
             <shaper2/>
             <description>SEDE02: cliente AD -&gt; 10.10.20.10/32</description>
           </rule>
-          <rule uuid="bc5d400c-1d0a-47ca-ae3c-8c34199e7c0f">
+          <rule uuid="41820bf0-c67e-4e15-b708-b0ebc13b7eea">
             <enabled>1</enabled>
             <statetype>keep</statetype>
             <state-policy/>
-            <sequence>290</sequence>
+            <sequence>310</sequence>
             <action>pass</action>
             <quick>1</quick>
             <interfacenot>0</interfacenot>
@@ -1798,11 +1912,11 @@
             <shaper2/>
             <description>SEDE02: cliente AD -&gt; 10.20.20.10/32</description>
           </rule>
-          <rule uuid="c43a9ce7-14ff-4843-927a-69ccd6b6557d">
+          <rule uuid="bdfa5c60-007e-42ad-a945-167bdc699b09">
             <enabled>1</enabled>
             <statetype>keep</statetype>
             <state-policy/>
-            <sequence>300</sequence>
+            <sequence>320</sequence>
             <action>pass</action>
             <quick>1</quick>
             <interfacenot>0</interfacenot>
@@ -1854,11 +1968,11 @@
             <shaper2/>
             <description>SEDE02: DNS/RDP a servidores 10.10.20.0/24</description>
           </rule>
-          <rule uuid="519badd9-be1b-4ee5-8437-e112caa16403">
+          <rule uuid="c8688d1a-e2cc-40ac-b498-453403b0231f">
             <enabled>1</enabled>
             <statetype>keep</statetype>
             <state-policy/>
-            <sequence>310</sequence>
+            <sequence>330</sequence>
             <action>pass</action>
             <quick>1</quick>
             <interfacenot>0</interfacenot>
@@ -1910,11 +2024,11 @@
             <shaper2/>
             <description>SEDE02: ping a servidores 10.10.20.0/24</description>
           </rule>
-          <rule uuid="b1c7784d-d421-4546-84cb-2ea421ac9306">
+          <rule uuid="dde7a317-58ed-466d-b067-4b8305325eff">
             <enabled>1</enabled>
             <statetype>keep</statetype>
             <state-policy/>
-            <sequence>320</sequence>
+            <sequence>340</sequence>
             <action>pass</action>
             <quick>1</quick>
             <interfacenot>0</interfacenot>
@@ -1966,11 +2080,11 @@
             <shaper2/>
             <description>SEDE02: DNS/RDP a servidores 10.20.20.0/24</description>
           </rule>
-          <rule uuid="81efc248-36ab-462d-b044-a0d914a888f3">
+          <rule uuid="f1de7482-26b9-4adb-8c00-f35dd5cc702e">
             <enabled>1</enabled>
             <statetype>keep</statetype>
             <state-policy/>
-            <sequence>330</sequence>
+            <sequence>350</sequence>
             <action>pass</action>
             <quick>1</quick>
             <interfacenot>0</interfacenot>
@@ -2022,11 +2136,11 @@
             <shaper2/>
             <description>SEDE02: ping a servidores 10.20.20.0/24</description>
           </rule>
-          <rule uuid="90ce733c-3095-4d02-be53-d6e3cbe74165">
+          <rule uuid="9a36b43d-c6ee-47e7-b546-74207ead37b6">
             <enabled>1</enabled>
             <statetype>keep</statetype>
             <state-policy/>
-            <sequence>340</sequence>
+            <sequence>360</sequence>
             <action>block</action>
             <quick>1</quick>
             <interfacenot>0</interfacenot>
@@ -2078,11 +2192,11 @@
             <shaper2/>
             <description>SEDE02: resto bloqueado (hub-and-spoke)</description>
           </rule>
-          <rule uuid="3a2b1b9f-4c80-473c-a64f-ecdeda2bea4a">
+          <rule uuid="0ae549af-da06-473a-9a96-fd1825ced860">
             <enabled>1</enabled>
             <statetype>keep</statetype>
             <state-policy/>
-            <sequence>350</sequence>
+            <sequence>370</sequence>
             <action>pass</action>
             <quick>1</quick>
             <interfacenot>0</interfacenot>
@@ -2134,11 +2248,11 @@
             <shaper2/>
             <description>SEDE03: IKE/NAT-T desde la sede</description>
           </rule>
-          <rule uuid="2808cf1f-2e7e-4186-bb90-b60ded07562f">
+          <rule uuid="aed96adf-521c-4240-9335-cd6775401fdc">
             <enabled>1</enabled>
             <statetype>keep</statetype>
             <state-policy/>
-            <sequence>360</sequence>
+            <sequence>380</sequence>
             <action>pass</action>
             <quick>1</quick>
             <interfacenot>0</interfacenot>
@@ -2190,11 +2304,67 @@
             <shaper2/>
             <description>SEDE03: ESP desde la sede</description>
           </rule>
-          <rule uuid="959d0eaa-433c-4f43-9970-e278dd3c2c90">
+          <rule uuid="5623c177-a421-472b-9fdd-10a30c07b1b5">
             <enabled>1</enabled>
             <statetype>keep</statetype>
             <state-policy/>
-            <sequence>370</sequence>
+            <sequence>390</sequence>
+            <action>block</action>
+            <quick>1</quick>
+            <interfacenot>0</interfacenot>
+            <interface>opt12</interface>
+            <direction>in</direction>
+            <ipprotocol>inet</ipprotocol>
+            <protocol>TCP</protocol>
+            <icmptype/>
+            <icmp6type/>
+            <source_net>any</source_net>
+            <source_not>0</source_not>
+            <source_port/>
+            <destination_net>(self)</destination_net>
+            <destination_not>0</destination_not>
+            <destination_port/>
+            <divert-to/>
+            <gateway/>
+            <replyto/>
+            <disablereplyto>0</disablereplyto>
+            <log>1</log>
+            <allowopts>0</allowopts>
+            <nosync>0</nosync>
+            <nopfsync>0</nopfsync>
+            <statetimeout/>
+            <udp-first/>
+            <udp-multiple/>
+            <udp-single/>
+            <max-src-nodes/>
+            <max-src-states/>
+            <max-src-conn/>
+            <max/>
+            <max-src-conn-rate/>
+            <max-src-conn-rates/>
+            <overload/>
+            <adaptivestart/>
+            <adaptiveend/>
+            <prio/>
+            <set-prio/>
+            <set-prio-low/>
+            <tag/>
+            <tagged/>
+            <tcpflags1/>
+            <tcpflags2/>
+            <tcpflags_any>0</tcpflags_any>
+            <categories/>
+            <sched/>
+            <tos/>
+            <shaper1/>
+            <shaper2/>
+            <description>SEDE03: nada hacia el propio firewall (SSH/GUI)</description>
+          </rule>
+          <rule uuid="cf11de9c-f034-4a02-a843-980b78b6c7d7">
+            <enabled>1</enabled>
+            <statetype>keep</statetype>
+            <state-policy/>
+            <sequence>400</sequence>
             <action>pass</action>
             <quick>1</quick>
             <interfacenot>0</interfacenot>
@@ -2246,11 +2416,11 @@
             <shaper2/>
             <description>SEDE03: OSPF</description>
           </rule>
-          <rule uuid="07de1a2f-2028-47e1-8d97-edba2d6f2d7f">
+          <rule uuid="bbb3d6b9-c409-411b-8476-89f717355557">
             <enabled>1</enabled>
             <statetype>keep</statetype>
             <state-policy/>
-            <sequence>380</sequence>
+            <sequence>410</sequence>
             <action>pass</action>
             <quick>1</quick>
             <interfacenot>0</interfacenot>
@@ -2302,11 +2472,11 @@
             <shaper2/>
             <description>SEDE03: cliente AD -&gt; 10.10.20.10/32</description>
           </rule>
-          <rule uuid="bfdd7693-835e-41dc-93c7-c795215d5f77">
+          <rule uuid="ac9fd2be-3e8a-4adf-b2c1-324a6fbd2c4e">
             <enabled>1</enabled>
             <statetype>keep</statetype>
             <state-policy/>
-            <sequence>390</sequence>
+            <sequence>420</sequence>
             <action>pass</action>
             <quick>1</quick>
             <interfacenot>0</interfacenot>
@@ -2358,11 +2528,11 @@
             <shaper2/>
             <description>SEDE03: cliente AD -&gt; 10.20.20.10/32</description>
           </rule>
-          <rule uuid="7c1e777c-b10e-4f08-b9a8-450cedf3233f">
+          <rule uuid="b383f9c7-7382-4d8f-9841-cd134ecc275c">
             <enabled>1</enabled>
             <statetype>keep</statetype>
             <state-policy/>
-            <sequence>400</sequence>
+            <sequence>430</sequence>
             <action>pass</action>
             <quick>1</quick>
             <interfacenot>0</interfacenot>
@@ -2414,11 +2584,11 @@
             <shaper2/>
             <description>SEDE03: DNS/RDP a servidores 10.10.20.0/24</description>
           </rule>
-          <rule uuid="a45db771-7b99-47e2-8c4f-04a82b8b0ca1">
+          <rule uuid="f96a64a0-f70f-4b58-a345-5c0b18fdbd49">
             <enabled>1</enabled>
             <statetype>keep</statetype>
             <state-policy/>
-            <sequence>410</sequence>
+            <sequence>440</sequence>
             <action>pass</action>
             <quick>1</quick>
             <interfacenot>0</interfacenot>
@@ -2470,11 +2640,11 @@
             <shaper2/>
             <description>SEDE03: ping a servidores 10.10.20.0/24</description>
           </rule>
-          <rule uuid="b857c488-468d-4c66-8d98-d5549bd9d468">
+          <rule uuid="101740e5-281e-4082-8dc9-4298cfae8d32">
             <enabled>1</enabled>
             <statetype>keep</statetype>
             <state-policy/>
-            <sequence>420</sequence>
+            <sequence>450</sequence>
             <action>pass</action>
             <quick>1</quick>
             <interfacenot>0</interfacenot>
@@ -2526,11 +2696,11 @@
             <shaper2/>
             <description>SEDE03: DNS/RDP a servidores 10.20.20.0/24</description>
           </rule>
-          <rule uuid="ab79c0b7-ebd0-441d-8f26-92dd48cb1e45">
+          <rule uuid="4480996f-ca82-4d9f-9e24-0f08d4ff0a86">
             <enabled>1</enabled>
             <statetype>keep</statetype>
             <state-policy/>
-            <sequence>430</sequence>
+            <sequence>460</sequence>
             <action>pass</action>
             <quick>1</quick>
             <interfacenot>0</interfacenot>
@@ -2582,11 +2752,11 @@
             <shaper2/>
             <description>SEDE03: ping a servidores 10.20.20.0/24</description>
           </rule>
-          <rule uuid="7037c80f-1ca0-428e-bd32-c2d3d26a1c26">
+          <rule uuid="b5cebfc3-b30d-4fe6-ada9-74a834f2e1fa">
             <enabled>1</enabled>
             <statetype>keep</statetype>
             <state-policy/>
-            <sequence>440</sequence>
+            <sequence>470</sequence>
             <action>block</action>
             <quick>1</quick>
             <interfacenot>0</interfacenot>
@@ -2638,11 +2808,11 @@
             <shaper2/>
             <description>SEDE03: resto bloqueado (hub-and-spoke)</description>
           </rule>
-          <rule uuid="49094917-a604-4aa6-ab16-838db17782ad">
+          <rule uuid="4b03af13-4b94-473a-8332-4af3beaac637">
             <enabled>1</enabled>
             <statetype>keep</statetype>
             <state-policy/>
-            <sequence>450</sequence>
+            <sequence>480</sequence>
             <action>pass</action>
             <quick>1</quick>
             <interfacenot>0</interfacenot>
@@ -2694,11 +2864,11 @@
             <shaper2/>
             <description>DMZ -&gt; servicios publicados</description>
           </rule>
-          <rule uuid="d70879d7-2fa8-4ff3-a675-f2d92e0d374c">
+          <rule uuid="c12a868a-d236-4456-bdb3-ab8681998ef1">
             <enabled>1</enabled>
             <statetype>keep</statetype>
             <state-policy/>
-            <sequence>460</sequence>
+            <sequence>490</sequence>
             <action>pass</action>
             <quick>1</quick>
             <interfacenot>0</interfacenot>
@@ -2750,11 +2920,11 @@
             <shaper2/>
             <description>DMZ -&gt; DNS interno</description>
           </rule>
-          <rule uuid="3e914906-e25c-49d0-b69e-001c4705ae42">
+          <rule uuid="c057b8e0-3169-49ca-9b8c-50580f64d2db">
             <enabled>1</enabled>
             <statetype>keep</statetype>
             <state-policy/>
-            <sequence>470</sequence>
+            <sequence>500</sequence>
             <action>pass</action>
             <quick>1</quick>
             <interfacenot>0</interfacenot>
@@ -2806,11 +2976,11 @@
             <shaper2/>
             <description>DMZ -&gt; Internet (cloudflared)</description>
           </rule>
-          <rule uuid="689bba5c-ce23-4cf8-ab08-b100f49c2658">
+          <rule uuid="643b40bf-734c-48ce-8224-39bf6c2c5af1">
             <enabled>1</enabled>
             <statetype>keep</statetype>
             <state-policy/>
-            <sequence>480</sequence>
+            <sequence>510</sequence>
             <action>block</action>
             <quick>1</quick>
             <interfacenot>0</interfacenot>
@@ -2862,11 +3032,11 @@
             <shaper2/>
             <description>DMZ: resto bloqueado</description>
           </rule>
-          <rule uuid="cb2e6d5a-8c95-4710-b435-d7a7a72acc0c">
+          <rule uuid="54bf18f8-0ea8-4dc1-9c34-d9abc0e4c428">
             <enabled>1</enabled>
             <statetype>keep</statetype>
             <state-policy/>
-            <sequence>490</sequence>
+            <sequence>520</sequence>
             <action>pass</action>
             <quick>1</quick>
             <interfacenot>0</interfacenot>
@@ -2918,11 +3088,11 @@
             <shaper2/>
             <description>RESPALDO -&gt; DC local (LDAP/Kerberos/DNS para el NAS)</description>
           </rule>
-          <rule uuid="8031c5d8-0518-4027-be95-33ed6b274c74">
+          <rule uuid="f61c6139-900c-42a4-a3a3-33f1e3b33ac1">
             <enabled>1</enabled>
             <statetype>keep</statetype>
             <state-policy/>
-            <sequence>500</sequence>
+            <sequence>530</sequence>
             <action>pass</action>
             <quick>1</quick>
             <interfacenot>0</interfacenot>
@@ -2974,11 +3144,11 @@
             <shaper2/>
             <description>RESPALDO -&gt; Internet/Site A</description>
           </rule>
-          <rule uuid="a6032d32-6ab7-4d4f-a338-0f1fce0c38a5">
+          <rule uuid="a7862b53-d4bb-4d39-abf5-4c65d5c2ab92">
             <enabled>1</enabled>
             <statetype>keep</statetype>
             <state-policy/>
-            <sequence>510</sequence>
+            <sequence>540</sequence>
             <action>block</action>
             <quick>1</quick>
             <interfacenot>0</interfacenot>
@@ -3032,7 +3202,7 @@
           </rule>
         </rules>
         <snatrules>
-          <rule uuid="51a038a3-1ae5-4bf4-a50e-11f649b86400">
+          <rule uuid="80e9e47b-64f5-4856-af1c-1b2b55dd590e">
             <enabled>1</enabled>
             <nonat>0</nonat>
             <nosync>0</nosync>
@@ -3055,7 +3225,7 @@
             <tagged/>
             <description>Salida a Internet por 203.0.113.10</description>
           </rule>
-          <rule uuid="396d93fd-b7e5-4a3c-acf3-5f03d2c27750">
+          <rule uuid="87396352-c474-42ff-8946-61e493fbd789">
             <enabled>1</enabled>
             <nonat>0</nonat>
             <nosync>0</nosync>
@@ -3085,12 +3255,12 @@
       <Lvtemplate version="0.0.1" persisted_at="1795286846.04" description="Firewall Live View filter templates">
         <templates/>
       </Lvtemplate>
-      <Alias version="1.0.1" persisted_at="1795321295.38" description="Firewall aliases">
+      <Alias version="1.0.1" persisted_at="1795326078.61" description="Firewall aliases">
         <geoip>
           <url/>
         </geoip>
         <aliases>
-          <alias uuid="e0e4f0b2-9997-4eb2-865d-939e9127d908">
+          <alias uuid="9cd24286-bf39-4696-8216-ef76c5740189">
             <enabled>1</enabled>
             <name>PUERTOS_PUBLICADOS</name>
             <type>port</type>
@@ -3112,7 +3282,7 @@
             <categories/>
             <description>ACC Site B</description>
           </alias>
-          <alias uuid="ffac726e-c582-4e07-a5b0-4768d5c1beaf">
+          <alias uuid="77ff7a38-03fd-4398-ad84-a58804a73c43">
             <enabled>1</enabled>
             <name>PUERTOS_WEB_DNS</name>
             <type>port</type>
@@ -3131,7 +3301,7 @@
             <categories/>
             <description>ACC Site B</description>
           </alias>
-          <alias uuid="b3da44ad-14a2-4525-9a7c-beab1c634f7a">
+          <alias uuid="681c2ea5-55d6-437b-89bb-96a4dc852f9f">
             <enabled>1</enabled>
             <name>PUERTOS_IKE</name>
             <type>port</type>
@@ -3149,7 +3319,7 @@
             <categories/>
             <description>ACC Site B</description>
           </alias>
-          <alias uuid="38a02b9a-d438-45a8-9c21-60efc83a86e1">
+          <alias uuid="4f68cc31-e589-4df6-94ce-f514bd221084">
             <enabled>1</enabled>
             <name>PUERTOS_AD</name>
             <type>port</type>
@@ -3169,7 +3339,7 @@
             <categories/>
             <description>ACC Site B</description>
           </alias>
-          <alias uuid="512d7bbe-a50b-4a0e-b97f-b13951726918">
+          <alias uuid="a4eb7577-a5ad-428b-9e78-2afa8c05a54e">
             <enabled>1</enabled>
             <name>PUERTOS_RDP</name>
             <type>port</type>
@@ -3186,7 +3356,7 @@
             <categories/>
             <description>ACC Site B</description>
           </alias>
-          <alias uuid="d6dae48c-a10a-4d73-ac2d-566d4373a7b1">
+          <alias uuid="d5baa8de-f7f4-4e61-b467-003f4beaca49">
             <enabled>1</enabled>
             <name>PUERTOS_SEDE</name>
             <type>port</type>
@@ -3204,7 +3374,7 @@
             <categories/>
             <description>ACC Site B</description>
           </alias>
-          <alias uuid="d5ce0dc7-2e6a-4a3b-9ce4-917f334517ac">
+          <alias uuid="79695895-8698-47db-b5ec-79d534c30150">
             <enabled>1</enabled>
             <name>PUERTOS_AD_CLIENTE</name>
             <type>port</type>
@@ -3314,7 +3484,7 @@
         </eveLog>
       </general>
     </IDS>
-    <IPsec version="1.0.5" persisted_at="1795321295.66" description="IPsec settings">
+    <IPsec version="1.0.5" persisted_at="1795326078.86" description="IPsec settings">
       <general>
         <enabled/>
         <preferred_oldsa>0</preferred_oldsa>
@@ -3389,35 +3559,35 @@
       </charon>
       <keyPairs/>
       <preSharedKeys>
-        <preSharedKey uuid="3a9a87d3-5d88-4d26-9752-fd6f654d5e30">
+        <preSharedKey uuid="305bc72f-1977-4257-a801-7511508eedb8">
           <ident>203.0.113.10</ident>
           <remote_ident>203.0.113.4</remote_ident>
           <keyType>PSK</keyType>
           <Key>***</Key>
           <description>VTI_ISP1 A&lt;-&gt;B</description>
         </preSharedKey>
-        <preSharedKey uuid="48ad75d5-20ae-4a5e-bf57-caf2b907844d">
+        <preSharedKey uuid="db1fdb6c-c14e-4310-be6e-b186025e5471">
           <ident>198.51.100.10</ident>
           <remote_ident>198.51.100.4</remote_ident>
           <keyType>PSK</keyType>
           <Key>***</Key>
           <description>VTI_ISP2 A&lt;-&gt;B</description>
         </preSharedKey>
-        <preSharedKey uuid="1b9e9e60-0a24-4013-a082-18aee34a91f3">
+        <preSharedKey uuid="2b991bee-692c-4316-9a29-5eb8a14b9136">
           <ident>203.0.113.10</ident>
           <remote_ident>kit-sede-01.alcaldia.lab</remote_ident>
           <keyType>PSK</keyType>
           <Key>***</Key>
           <description>SEDE01</description>
         </preSharedKey>
-        <preSharedKey uuid="85ac468e-f26a-4c77-9718-f71b33362464">
+        <preSharedKey uuid="85a1594f-b59b-4a1f-bda4-8e3cd6ad02f4">
           <ident>203.0.113.10</ident>
           <remote_ident>kit-sede-02.alcaldia.lab</remote_ident>
           <keyType>PSK</keyType>
           <Key>***</Key>
           <description>SEDE02</description>
         </preSharedKey>
-        <preSharedKey uuid="68cf31d7-8b3f-41a8-8499-922c9253b092">
+        <preSharedKey uuid="6ffa26fd-e473-4a02-b271-f4d502c448c2">
           <ident>203.0.113.10</ident>
           <remote_ident>kit-sede-03.alcaldia.lab</remote_ident>
           <keyType>PSK</keyType>
@@ -3426,9 +3596,9 @@
         </preSharedKey>
       </preSharedKeys>
     </IPsec>
-    <Swanctl version="1.0.0" persisted_at="1795321295.70" description="IPsec connections">
+    <Swanctl version="1.0.0" persisted_at="1795326078.91" description="IPsec connections">
       <Connections>
-        <Connection uuid="dbf76b66-748e-4eca-b9ec-ff5533e58734">
+        <Connection uuid="6b24f963-9e8b-4f2c-b360-255a597138f2">
           <enabled>1</enabled>
           <proposals>default</proposals>
           <unique>replace</unique>
@@ -3451,7 +3621,7 @@
           <keyingtries>0</keyingtries>
           <description>VTI_ISP1 A&lt;-&gt;B</description>
         </Connection>
-        <Connection uuid="879d192c-dc9b-44d6-bd65-f24d2b720519">
+        <Connection uuid="e056eabd-8dfd-4e6c-ac2c-bd871ea5606d">
           <enabled>1</enabled>
           <proposals>default</proposals>
           <unique>replace</unique>
@@ -3474,7 +3644,7 @@
           <keyingtries>0</keyingtries>
           <description>VTI_ISP2 A&lt;-&gt;B</description>
         </Connection>
-        <Connection uuid="98cd1605-1578-4f4a-aac4-07b7b28123ad">
+        <Connection uuid="d5f662e3-4122-403d-822f-c911e1a91c55">
           <enabled>1</enabled>
           <proposals>default</proposals>
           <unique>replace</unique>
@@ -3497,7 +3667,7 @@
           <keyingtries>0</keyingtries>
           <description>SEDE01</description>
         </Connection>
-        <Connection uuid="7ff48a49-f15c-4f7e-b148-3b0966793c42">
+        <Connection uuid="0bfa8878-d306-4684-847d-e5980dfaf63d">
           <enabled>1</enabled>
           <proposals>default</proposals>
           <unique>replace</unique>
@@ -3520,7 +3690,7 @@
           <keyingtries>0</keyingtries>
           <description>SEDE02</description>
         </Connection>
-        <Connection uuid="606c92d7-5524-4663-9e41-295b32383289">
+        <Connection uuid="c859fc56-f7ac-455d-a322-b7bbddf685d7">
           <enabled>1</enabled>
           <proposals>default</proposals>
           <unique>replace</unique>
@@ -3545,9 +3715,9 @@
         </Connection>
       </Connections>
       <locals>
-        <local uuid="4379abdf-aa51-42da-aad7-b3e6fff1d128">
+        <local uuid="e7639db0-2174-4aba-8603-bae9ef275148">
           <enabled>1</enabled>
-          <connection>dbf76b66-748e-4eca-b9ec-ff5533e58734</connection>
+          <connection>6b24f963-9e8b-4f2c-b360-255a597138f2</connection>
           <round>0</round>
           <auth>psk</auth>
           <id>203.0.113.10</id>
@@ -3556,9 +3726,9 @@
           <pubkeys/>
           <description>VTI_ISP1 local</description>
         </local>
-        <local uuid="56ec394c-f293-4f5d-ade8-bc4c6c43bba6">
+        <local uuid="8a95f360-f9f0-4b8f-a973-55371223ada6">
           <enabled>1</enabled>
-          <connection>879d192c-dc9b-44d6-bd65-f24d2b720519</connection>
+          <connection>e056eabd-8dfd-4e6c-ac2c-bd871ea5606d</connection>
           <round>0</round>
           <auth>psk</auth>
           <id>198.51.100.10</id>
@@ -3567,9 +3737,9 @@
           <pubkeys/>
           <description>VTI_ISP2 local</description>
         </local>
-        <local uuid="224073b3-e098-4039-80d5-1ba121a10f01">
+        <local uuid="351a4049-4650-49e2-ad36-845fa79af7f2">
           <enabled>1</enabled>
-          <connection>98cd1605-1578-4f4a-aac4-07b7b28123ad</connection>
+          <connection>d5f662e3-4122-403d-822f-c911e1a91c55</connection>
           <round>0</round>
           <auth>psk</auth>
           <id>203.0.113.10</id>
@@ -3578,9 +3748,9 @@
           <pubkeys/>
           <description>SEDE01 local</description>
         </local>
-        <local uuid="f139033d-7dda-435c-9313-63524a3b9895">
+        <local uuid="82250eba-aa81-491e-ac7f-b4d2071edb67">
           <enabled>1</enabled>
-          <connection>7ff48a49-f15c-4f7e-b148-3b0966793c42</connection>
+          <connection>0bfa8878-d306-4684-847d-e5980dfaf63d</connection>
           <round>0</round>
           <auth>psk</auth>
           <id>203.0.113.10</id>
@@ -3589,9 +3759,9 @@
           <pubkeys/>
           <description>SEDE02 local</description>
         </local>
-        <local uuid="bad6583c-c559-4a84-897f-9f813f2e66a6">
+        <local uuid="f0712454-109b-4a0c-8ac6-e414df24ef9b">
           <enabled>1</enabled>
-          <connection>606c92d7-5524-4663-9e41-295b32383289</connection>
+          <connection>c859fc56-f7ac-455d-a322-b7bbddf685d7</connection>
           <round>0</round>
           <auth>psk</auth>
           <id>203.0.113.10</id>
@@ -3602,9 +3772,9 @@
         </local>
       </locals>
       <remotes>
-        <remote uuid="8026d2f1-7b83-4336-95b7-1fdab8e84da9">
+        <remote uuid="d59b631f-b740-462c-a8cb-5865c7a412ae">
           <enabled>1</enabled>
-          <connection>dbf76b66-748e-4eca-b9ec-ff5533e58734</connection>
+          <connection>6b24f963-9e8b-4f2c-b360-255a597138f2</connection>
           <round>0</round>
           <auth>psk</auth>
           <id>203.0.113.4</id>
@@ -3615,9 +3785,9 @@
           <pubkeys/>
           <description>VTI_ISP1 remoto</description>
         </remote>
-        <remote uuid="6d4f219d-1ab9-4ce6-93cf-9e29f87fbee2">
+        <remote uuid="6945861c-8e28-4c7c-b608-f5308c14bc89">
           <enabled>1</enabled>
-          <connection>879d192c-dc9b-44d6-bd65-f24d2b720519</connection>
+          <connection>e056eabd-8dfd-4e6c-ac2c-bd871ea5606d</connection>
           <round>0</round>
           <auth>psk</auth>
           <id>198.51.100.4</id>
@@ -3628,9 +3798,9 @@
           <pubkeys/>
           <description>VTI_ISP2 remoto</description>
         </remote>
-        <remote uuid="9bb95d27-fdd1-41df-9c1c-8880c29e1e27">
+        <remote uuid="9af4c43f-40ae-4fbf-a930-bca94877f3a1">
           <enabled>1</enabled>
-          <connection>98cd1605-1578-4f4a-aac4-07b7b28123ad</connection>
+          <connection>d5f662e3-4122-403d-822f-c911e1a91c55</connection>
           <round>0</round>
           <auth>psk</auth>
           <id>kit-sede-01.alcaldia.lab</id>
@@ -3641,9 +3811,9 @@
           <pubkeys/>
           <description>SEDE01 sede</description>
         </remote>
-        <remote uuid="74cff9b0-c179-4d9f-ac27-750f0b90c508">
+        <remote uuid="b528c169-8f0c-448d-9144-d0caceeb3eaf">
           <enabled>1</enabled>
-          <connection>7ff48a49-f15c-4f7e-b148-3b0966793c42</connection>
+          <connection>0bfa8878-d306-4684-847d-e5980dfaf63d</connection>
           <round>0</round>
           <auth>psk</auth>
           <id>kit-sede-02.alcaldia.lab</id>
@@ -3654,9 +3824,9 @@
           <pubkeys/>
           <description>SEDE02 sede</description>
         </remote>
-        <remote uuid="b34b9e91-6fa0-4a4c-a555-b304c668ab7b">
+        <remote uuid="fd67a660-a4c9-4842-9e0e-2d7ab0022bd8">
           <enabled>1</enabled>
-          <connection>606c92d7-5524-4663-9e41-295b32383289</connection>
+          <connection>c859fc56-f7ac-455d-a322-b7bbddf685d7</connection>
           <round>0</round>
           <auth>psk</auth>
           <id>kit-sede-03.alcaldia.lab</id>
@@ -3669,9 +3839,9 @@
         </remote>
       </remotes>
       <children>
-        <child uuid="a3c86cae-d06b-4696-9053-9b670f101ebe">
+        <child uuid="e58c8493-36dc-4fec-b70e-f1f554a419d4">
           <enabled>1</enabled>
-          <connection>dbf76b66-748e-4eca-b9ec-ff5533e58734</connection>
+          <connection>6b24f963-9e8b-4f2c-b360-255a597138f2</connection>
           <reqid>1</reqid>
           <esp_proposals>default</esp_proposals>
           <sha256_96>0</sha256_96>
@@ -3685,9 +3855,9 @@
           <rekey_time>3600</rekey_time>
           <description>VTI_ISP1 child</description>
         </child>
-        <child uuid="72e67fda-cf83-4bc6-b1c5-5ff67be8ee1f">
+        <child uuid="ed09ae68-328a-4b3d-9573-3c5b3a0b6aee">
           <enabled>1</enabled>
-          <connection>879d192c-dc9b-44d6-bd65-f24d2b720519</connection>
+          <connection>e056eabd-8dfd-4e6c-ac2c-bd871ea5606d</connection>
           <reqid>2</reqid>
           <esp_proposals>default</esp_proposals>
           <sha256_96>0</sha256_96>
@@ -3701,9 +3871,9 @@
           <rekey_time>3600</rekey_time>
           <description>VTI_ISP2 child</description>
         </child>
-        <child uuid="f3f4b2e9-bb3d-42aa-85f7-8eebfd25f885">
+        <child uuid="11ab0f98-34ed-4f0a-b2ab-f0aca627b659">
           <enabled>1</enabled>
-          <connection>98cd1605-1578-4f4a-aac4-07b7b28123ad</connection>
+          <connection>d5f662e3-4122-403d-822f-c911e1a91c55</connection>
           <reqid>31</reqid>
           <esp_proposals>default</esp_proposals>
           <sha256_96>0</sha256_96>
@@ -3717,9 +3887,9 @@
           <rekey_time>3600</rekey_time>
           <description>SEDE01 child</description>
         </child>
-        <child uuid="1487e294-54ab-41c0-a55c-17ab96254f0e">
+        <child uuid="c1dcd6bc-a507-4be7-981e-3696b3a1e7c2">
           <enabled>1</enabled>
-          <connection>7ff48a49-f15c-4f7e-b148-3b0966793c42</connection>
+          <connection>0bfa8878-d306-4684-847d-e5980dfaf63d</connection>
           <reqid>32</reqid>
           <esp_proposals>default</esp_proposals>
           <sha256_96>0</sha256_96>
@@ -3733,9 +3903,9 @@
           <rekey_time>3600</rekey_time>
           <description>SEDE02 child</description>
         </child>
-        <child uuid="5eaf5921-8805-4f48-b80e-97ae0f801e0e">
+        <child uuid="e7446e97-e4fd-43f9-a8e2-18332d503fc3">
           <enabled>1</enabled>
-          <connection>606c92d7-5524-4663-9e41-295b32383289</connection>
+          <connection>c859fc56-f7ac-455d-a322-b7bbddf685d7</connection>
           <reqid>33</reqid>
           <esp_proposals>default</esp_proposals>
           <sha256_96>0</sha256_96>
@@ -3752,7 +3922,7 @@
       </children>
       <Pools/>
       <VTIs>
-        <VTI uuid="fa1de3a0-c2f2-4cae-b9ab-7a8b509bf176">
+        <VTI uuid="e84379df-7b15-4ec1-8742-35db0359d5cd">
           <enabled>1</enabled>
           <reqid>1</reqid>
           <local>203.0.113.10</local>
@@ -3764,7 +3934,7 @@
           <skip_fw>0</skip_fw>
           <description>VTI_ISP1</description>
         </VTI>
-        <VTI uuid="f29dbded-c51c-49ac-a51e-2b7f278c5fb8">
+        <VTI uuid="bf4b6b4c-4c35-4ce9-99f6-f7cb67eb860d">
           <enabled>1</enabled>
           <reqid>2</reqid>
           <local>198.51.100.10</local>
@@ -3776,7 +3946,7 @@
           <skip_fw>0</skip_fw>
           <description>VTI_ISP2</description>
         </VTI>
-        <VTI uuid="dc736fef-20b6-4591-a40c-c0fd8360593a">
+        <VTI uuid="cfad1fe3-90a6-445e-ba45-d512be66f65e">
           <enabled>1</enabled>
           <reqid>31</reqid>
           <local>203.0.113.10</local>
@@ -3788,7 +3958,7 @@
           <skip_fw>0</skip_fw>
           <description>SEDE01</description>
         </VTI>
-        <VTI uuid="10f65237-cc41-4275-8d12-55556d559aae">
+        <VTI uuid="8626f0c1-333f-48e3-ad5d-ec708e3ff824">
           <enabled>1</enabled>
           <reqid>32</reqid>
           <local>203.0.113.10</local>
@@ -3800,7 +3970,7 @@
           <skip_fw>0</skip_fw>
           <description>SEDE02</description>
         </VTI>
-        <VTI uuid="6d03a883-7efa-4b4d-bedb-305167755f81">
+        <VTI uuid="02e422e1-e698-422b-adad-d4389f66b96c">
           <enabled>1</enabled>
           <reqid>33</reqid>
           <local>203.0.113.10</local>
@@ -4103,8 +4273,8 @@
       <StaticKeys/>
     </OpenVPN>
     <radvd version="1.0.1" persisted_at="1795286846.59" description="Radvd configuration"/>
-    <Gateways version="1.0.0" persisted_at="1795321295.33" description="Gateways configuration">
-      <gateway_item uuid="0df02d44-efc9-4e1f-a8b1-cf851efc0ede">
+    <Gateways version="1.0.0" persisted_at="1795326078.56" description="Gateways configuration">
+      <gateway_item uuid="18c00d79-736a-4a43-a841-3332d51bfd5b">
         <disabled>0</disabled>
         <name>WAN1_GW</name>
         <descr>ISP1</descr>
@@ -4131,7 +4301,7 @@
         <loss_interval>2</loss_interval>
         <data_length/>
       </gateway_item>
-      <gateway_item uuid="69533cd9-829a-4c6e-b6df-869e0638ddee">
+      <gateway_item uuid="59266b8f-00d0-4ba3-a795-cd8b48241b07">
         <disabled>0</disabled>
         <name>WAN2_GW</name>
         <descr>ISP2</descr>
@@ -4299,7 +4469,7 @@
         <peergroups/>
         <redistributions/>
       </bgp>
-      <general version="1.1.5" persisted_at="1795321295.71" description="Quagga Routing configuration">
+      <general version="1.1.5" persisted_at="1795326078.91" description="Quagga Routing configuration">
         <enabled>1</enabled>
         <manual_config>0</manual_config>
         <profile>traditional</profile>
@@ -4309,7 +4479,7 @@
         <sysloglevel>notifications</sysloglevel>
         <fwrules>1</fwrules>
       </general>
-      <ospf version="1.1.5" persisted_at="1795321295.71" description="OSPF Routing configuration">
+      <ospf version="1.1.5" persisted_at="1795326078.91" description="OSPF Routing configuration">
         <enabled>1</enabled>
         <carp_demote>0</carp_demote>
         <routerid>10.20.10.1</routerid>
@@ -4331,7 +4501,7 @@
         <networks/>
         <neighbors/>
         <interfaces>
-          <interface uuid="8074a663-8fe6-4d3e-a447-136b5a9475fd">
+          <interface uuid="8db4fec4-5737-4dd5-a274-95203fe53fc5">
             <enabled>1</enabled>
             <interfacename>opt8</interfacename>
             <area>ed789245-f960-4fe7-bf35-98e0e27eeaba</area>
@@ -4340,7 +4510,7 @@
             <hellointerval>2</hellointerval>
             <deadinterval>8</deadinterval>
           </interface>
-          <interface uuid="5ac74c22-0ab4-485d-a52a-21fff6703c27">
+          <interface uuid="b3b994ac-07ea-493c-a0a2-be17fcad49bf">
             <enabled>1</enabled>
             <interfacename>opt9</interfacename>
             <area>ed789245-f960-4fe7-bf35-98e0e27eeaba</area>
@@ -4349,7 +4519,7 @@
             <hellointerval>2</hellointerval>
             <deadinterval>8</deadinterval>
           </interface>
-          <interface uuid="2e994965-ca2e-4df1-abf9-cb4179616593">
+          <interface uuid="852f4dfa-d92a-419a-a0b3-15c9ed4c357f">
             <enabled>1</enabled>
             <interfacename>opt10</interfacename>
             <area>ed789245-f960-4fe7-bf35-98e0e27eeaba</area>
@@ -4358,7 +4528,7 @@
             <hellointerval>2</hellointerval>
             <deadinterval>8</deadinterval>
           </interface>
-          <interface uuid="7b631592-80c7-42ef-a518-b9ad4739cb8d">
+          <interface uuid="505ece4d-b332-4c87-ab5c-ca6548b7e374">
             <enabled>1</enabled>
             <interfacename>opt11</interfacename>
             <area>ed789245-f960-4fe7-bf35-98e0e27eeaba</area>
@@ -4367,7 +4537,7 @@
             <hellointerval>2</hellointerval>
             <deadinterval>8</deadinterval>
           </interface>
-          <interface uuid="293fe646-9fe4-494b-a04f-5f6112b6a490">
+          <interface uuid="c398ea29-f65d-48f0-a53f-4409d1e00dd9">
             <enabled>1</enabled>
             <interfacename>opt12</interfacename>
             <area>ed789245-f960-4fe7-bf35-98e0e27eeaba</area>
@@ -4376,31 +4546,31 @@
             <hellointerval>2</hellointerval>
             <deadinterval>8</deadinterval>
           </interface>
-          <interface uuid="0c138fc4-894b-4a28-aeca-ff53194f9738">
+          <interface uuid="dc1cb2b5-1572-4456-a354-50b1f2a64652">
             <enabled>1</enabled>
             <interfacename>lan</interfacename>
             <area>ed789245-f960-4fe7-bf35-98e0e27eeaba</area>
             <passive>1</passive>
           </interface>
-          <interface uuid="ffe77021-1567-4786-abd0-3f94dc787fe7">
+          <interface uuid="2218abe5-c1c7-4821-aa21-113524322336">
             <enabled>1</enabled>
             <interfacename>opt2</interfacename>
             <area>ed789245-f960-4fe7-bf35-98e0e27eeaba</area>
             <passive>1</passive>
           </interface>
-          <interface uuid="ecbdc2b0-164e-4e28-aeac-eb6bfb968215">
+          <interface uuid="7ec6b26b-2d7e-4745-a8ce-7a02b04d3f02">
             <enabled>1</enabled>
             <interfacename>opt3</interfacename>
             <area>ed789245-f960-4fe7-bf35-98e0e27eeaba</area>
             <passive>1</passive>
           </interface>
-          <interface uuid="d3fafe4e-ea97-4add-aa47-ddc8977aa298">
+          <interface uuid="7a914327-be7c-4704-afe7-e8e1d15ab816">
             <enabled>1</enabled>
             <interfacename>opt4</interfacename>
             <area>ed789245-f960-4fe7-bf35-98e0e27eeaba</area>
             <passive>1</passive>
           </interface>
-          <interface uuid="84181772-be6b-42ff-aef9-ce9127b30964">
+          <interface uuid="ad9ba088-685f-45e0-adff-3b1e05e7e7e8">
             <enabled>1</enabled>
             <interfacename>opt6</interfacename>
             <area>ed789245-f960-4fe7-bf35-98e0e27eeaba</area>
@@ -4452,7 +4622,7 @@
     <password/>
     <syncitems/>
   </hasync>
-  <sysctl version="1.0.2" persisted_at="1795321295.65" description="System Tunables">
+  <sysctl version="1.0.2" persisted_at="1795326078.86" description="System Tunables">
     <item uuid="1bd1c479-fb07-421c-80ee-1133e4118b2b">
       <tunable>net.enc.in.ipsec_filter_mask</tunable>
       <value>0</value>
@@ -4469,9 +4639,9 @@
   <gifs version="1.0.0" persisted_at="1795286846.35" description="GIF devices"/>
   <gres version="1.0.0" persisted_at="1795286846.35" description="GRE devices"/>
   <laggs version="1.0.0" persisted_at="1795286846.38" description="LAGG devices"/>
-  <virtualip version="1.0.1" persisted_at="1795321295.32" description="Virtual IP configuration"/>
-  <vlans version="1.0.0" persisted_at="1795321295.32" description="VLAN configuration">
-    <vlan uuid="a11b3af8-807b-4eb3-b2bd-8a3ca70057ea">
+  <virtualip version="1.0.1" persisted_at="1795326078.55" description="Virtual IP configuration"/>
+  <vlans version="1.0.0" persisted_at="1795326078.55" description="VLAN configuration">
+    <vlan uuid="7f79523e-ac1f-4b6a-8dd8-c7abb07e9193">
       <if>vtnet2</if>
       <tag>10</tag>
       <pcp>0</pcp>
@@ -4479,7 +4649,7 @@
       <descr>GESTION</descr>
       <vlanif>vlan0.10</vlanif>
     </vlan>
-    <vlan uuid="37db77f0-1894-4f6a-97b9-bac3ccc4d2e1">
+    <vlan uuid="ef69a6c8-d196-487c-bf84-96b119b83cc1">
       <if>vtnet2</if>
       <tag>20</tag>
       <pcp>0</pcp>
@@ -4487,7 +4657,7 @@
       <descr>SERVIDORES</descr>
       <vlanif>vlan0.20</vlanif>
     </vlan>
-    <vlan uuid="338519c7-b717-44f2-a2fd-0ad1b5471e19">
+    <vlan uuid="ae9489e7-3637-4516-8923-90685857e6bc">
       <if>vtnet2</if>
       <tag>30</tag>
       <pcp>0</pcp>
@@ -4495,7 +4665,7 @@
       <descr>DMZ</descr>
       <vlanif>vlan0.30</vlanif>
     </vlan>
-    <vlan uuid="f23a7394-d1bb-4eb1-b54f-d1eca4c40aa3">
+    <vlan uuid="bfefb5ae-0193-4ca2-99c8-ad678db2eb27">
       <if>vtnet2</if>
       <tag>40</tag>
       <pcp>0</pcp>
@@ -4503,7 +4673,7 @@
       <descr>ADMINISTRACION</descr>
       <vlanif>vlan0.40</vlanif>
     </vlan>
-    <vlan uuid="af0cf065-15cc-49ee-8a6d-a310a38b4d59">
+    <vlan uuid="03860dc8-2caf-49a1-be5d-8b2092e25e5b">
       <if>vtnet2</if>
       <tag>60</tag>
       <pcp>0</pcp>
@@ -4523,11 +4693,15 @@
     <prv>***</prv>
   </cert>
   <gateways>
-    <gateway_group>
+    <gateway_group uuid="63f26b5d-0a7a-44bf-af51-7a5bc25d6cb8">
       <name>WAN_FAILOVER</name>
-      <item>WAN1_GW|1</item>
-      <item>WAN2_GW|2</item>
+      <item2>WAN2_GW</item2>
+      <item3/>
+      <item4/>
+      <item5/>
+      <item>WAN1_GW</item>
       <trigger>down</trigger>
+      <poolopts/>
       <descr>ISP1 principal, ISP2 respaldo</descr>
     </gateway_group>
   </gateways>
@@ -4611,5 +4785,60 @@
       <descr>SEDE03</descr>
       <enable>1</enable>
     </opt12>
+    <enc0>
+      <internal_dynamic>1</internal_dynamic>
+      <enable>1</enable>
+      <if>enc0</if>
+      <descr>IPsec encapsulation</descr>
+      <type>none</type>
+      <virtual>1</virtual>
+    </enc0>
+    <ipsec1>
+      <internal_dynamic>1</internal_dynamic>
+      <enable>1</enable>
+      <descr>VTI_ISP1</descr>
+      <if>ipsec1</if>
+      <type>none</type>
+    </ipsec1>
+    <ipsec2>
+      <internal_dynamic>1</internal_dynamic>
+      <enable>1</enable>
+      <descr>VTI_ISP2</descr>
+      <if>ipsec2</if>
+      <type>none</type>
+    </ipsec2>
+    <ipsec31>
+      <internal_dynamic>1</internal_dynamic>
+      <enable>1</enable>
+      <descr>SEDE01</descr>
+      <if>ipsec31</if>
+      <type>none</type>
+    </ipsec31>
+    <ipsec32>
+      <internal_dynamic>1</internal_dynamic>
+      <enable>1</enable>
+      <descr>SEDE02</descr>
+      <if>ipsec32</if>
+      <type>none</type>
+    </ipsec32>
+    <ipsec33>
+      <internal_dynamic>1</internal_dynamic>
+      <enable>1</enable>
+      <descr>SEDE03</descr>
+      <if>ipsec33</if>
+      <type>none</type>
+    </ipsec33>
+    <lo0>
+      <internal_dynamic>1</internal_dynamic>
+      <descr>Loopback</descr>
+      <enable>1</enable>
+      <if>lo0</if>
+      <ipaddr>127.0.0.1</ipaddr>
+      <ipaddrv6>::1</ipaddrv6>
+      <subnet>8</subnet>
+      <subnetv6>128</subnetv6>
+      <type>none</type>
+      <virtual>1</virtual>
+    </lo0>
   </interfaces>
 </opnsense>
