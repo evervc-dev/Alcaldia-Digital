@@ -24,9 +24,11 @@ usuario() { # usuario grupo "Nombre Apellido"
   [ "$2" = funcionarios ] && horario "$1" || true
 }
 if [ "${1:-}" = usuario ]; then usuario "$2" "$3" "$4"; exit; fi
-for g in funcionarios acceso-24h nas-admins; do dcx "samba-tool group show $g >/dev/null 2>&1 || samba-tool group add $g >/dev/null; echo '  grupo $g'"; done
+for g in funcionarios acceso-24h nas-admins mesa-tecnicos mesa-admins; do dcx "samba-tool group show $g >/dev/null 2>&1 || samba-tool group add $g >/dev/null; echo '  grupo $g'"; done
 dcx "samba-tool user show svc-lectura >/dev/null 2>&1 || samba-tool user create svc-lectura \"\$SP\" --description='Cuenta de servicio LDAP (solo lectura)' >/dev/null; samba-tool user setexpiry svc-lectura --noexpiry >/dev/null; echo '  cuenta de servicio svc-lectura'"
 usuario ana.funcionaria funcionarios "Ana Funcionaria"
 usuario tecnico.soporte acceso-24h "Tecnico Soporte"
 usuario admin.dc acceso-24h "Admin DC"
 dcx "samba-tool group addmembers 'Domain Admins' admin.dc >/dev/null 2>&1; samba-tool group addmembers nas-admins admin.dc >/dev/null 2>&1; echo '  admin.dc -> Domain Admins, nas-admins'"
+# GLPI (mesa.evervc.dev): perfil Technician / Admin según el grupo (reglas de autorización de GLPI, glpi-setup.sh)
+dcx "samba-tool group addmembers mesa-tecnicos tecnico.soporte >/dev/null 2>&1; samba-tool group addmembers mesa-admins admin.dc >/dev/null 2>&1; echo '  tecnico.soporte -> mesa-tecnicos, admin.dc -> mesa-admins'"

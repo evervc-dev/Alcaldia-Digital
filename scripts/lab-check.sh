@@ -24,6 +24,8 @@ chk "Authelia arrancada" "docker exec GNS3.authelia.$P grep -q 'Startup complete
 chk "ts1: xrdp escuchando :3389" "docker exec GNS3.cloudflared-a.$P nc -z -w3 10.10.20.40 3389"
 chk "NAS A/B vivos" "docker exec GNS3.nas-a.$P curl -sf http://127.0.0.1:9000/minio/health/live && docker exec GNS3.nas-a.$P curl -sf http://10.20.60.10:9000/minio/health/live"
 chk "Réplica del portal en B (< 2 h)" "docker exec GNS3.portal-db-b.$P sh -c 'f=/var/lib/postgresql/data/pgdata/replica_ok; [ \$(( \$(date +%s) - \$(date -d \$(cat \$f) +%s 2>/dev/null || stat -c %Y \$f) )) -lt 7200 ]'"
+chk "Mesa de servicio: GLPI responde y mesa.evervc.dev pide MFA (302)" "docker exec GNS3.portal.$P python3 -c 'import urllib.request;urllib.request.urlopen(\"http://10.10.20.31/\",timeout=8)' && [ \$(curl -s -o /dev/null -w '%{http_code}' --max-time 15 https://mesa.evervc.dev/) = 302 ]"
+chk "API de GLPI cerrada desde Internet (403)" "[ \$(curl -s -o /dev/null -w '%{http_code}' --max-time 15 https://mesa.evervc.dev/apirest.php/initSession) = 403 ]"
 echo "== Sedes"
 for n in 01 02 03; do
   T=$(docker exec GNS3.kit-sede-$n.$P sh -c 'swanctl --list-sas 2>/dev/null | grep -c ESTABLISHED' 2>/dev/null); O=$(docker exec GNS3.kit-sede-$n.$P sh -c 'vtysh -c "show ip ospf neighbor" | grep -c Full' 2>/dev/null)
@@ -44,7 +46,7 @@ print("; ".join(p["name"] for p in a("problem.get",{"output":["name"],"severitie
 [ -z "$PROB" ] && ok "Zabbix: sin problemas de severidad media o superior" || ko "Zabbix reporta: $PROB"
 
 echo "== Respaldos (F9)"
-for eq in ts1 archivo portal-db dc1; do
+for eq in ts1 archivo portal-db dc1 glpi-db glpi; do
   EDAD=$(docker exec GNS3.zbx-server.$P /etc/acc/restic-ultimo.sh $eq 2>/dev/null | python3 -c '
 import json,sys,re,datetime as d
 try:

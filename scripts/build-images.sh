@@ -5,7 +5,7 @@
 # Uso: build-images.sh [imagen...]   (sin argumentos: todas)
 set -euo pipefail
 cd "$(dirname "$0")/../images"
-ORDEN="router kit-sede pc pc-gui nas samba-dc escritorio puesto-linux pg portal gate authelia nginx cloudflared lam archivo zabbix"
+ORDEN="router kit-sede pc pc-gui nas samba-dc escritorio puesto-linux pg portal gate authelia nginx cloudflared lam archivo zabbix glpi glpi-db"
 for r in ${*:-$ORDEN}; do
   if [ "$r" = zabbix ]; then
     echo "== acc/zabbix-server:1.0"; docker build -q -t acc/zabbix-server:1.0 --build-arg BASE=zabbix/zabbix-server-pgsql:alpine-7.0-latest \

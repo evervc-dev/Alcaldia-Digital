@@ -9,7 +9,7 @@ Qué crea:
   - Kits de sede por SNMP ("Linux by SNMP" + estado de los 3 túneles IPsec y vecinos OSPF).
   - Réplica del portal en el Site B: antigüedad por ODBC (RPO 1 h), NAS: % ocupado (métricas MinIO).
   - Escenario web del portal público https://portal.evervc.dev (ruta completa Cloudflare -> túnel -> DMZ).
-  - Alertas por correo a mailpit (ti@alcaldia.lab) y mapa de red "Alcaldía Digital".
+  - Alertas por correo a mailpit (ti@alcaldia.lab), tickets en GLPI (webhook) y mapa de red "Alcaldía Digital".
 """
 import json, os, sys, urllib.request
 
@@ -146,6 +146,8 @@ servicios("ts1", "10.10.20.40", A, [("Escritorios RDP", "tcp", 3389)], "Escritor
 servicios("lam", "10.10.20.50", A, [("LAM (gestión de identidades)", "http", 80)], "Solo vía WARP.")
 servicios("zbx-db", "10.10.20.34", A, [("PostgreSQL Zabbix", "tcp", 5432)], "BD de Zabbix.")
 servicios("zbx-web", "10.10.20.33", A, [("Frontend Zabbix", "http", 8080)], "Interfaz web de Zabbix.")
+servicios("glpi", "10.10.20.31", A, [("GLPI (mesa de servicio)", "http", 80)], "Mesa de servicio GLPI 11 (mesa.evervc.dev, SSO con el AD).")
+servicios("glpi-db", "10.10.20.35", A, [("MariaDB GLPI", "tcp", 3306)], "BD de GLPI (MariaDB 11.4).")
 servicios("nginx-dmz", "10.10.30.10", A, [("HTTP", "http", 80), ("HTTPS", "tcp", 443)], "Proxy inverso de la DMZ.")
 servicios("cloudflared-a", "10.10.30.11", A, [], "Conector Cloudflare Tunnel del Site A (y WARP).")
 
@@ -230,7 +232,7 @@ for t in api("trigger.get", {"hostids": [HOSTS[f"kit-sede-{N:02d}"] for N in (1,
 # el JSON se convierte en segundos con JavaScript. Diario a las 02:00 -> alerta si pasan más de 26 h.
 JS_EDAD = ("var s = JSON.parse(value); if (!s.length) { return 999999999; }"
            " var t = s[0].time.replace(/\\.\\d+/, ''); return Math.floor(Date.now() / 1000 - Date.parse(t) / 1000);")
-for eq in ("ts1", "archivo", "portal-db", "dc1"):
+for eq in ("ts1", "archivo", "portal-db", "dc1", "glpi-db", "glpi"):
     hid = HOSTS[eq]
     key = f'restic-ultimo.sh["{eq}"]'
     item(hid, None, "Respaldo: antigüedad del último (restic)", key, type=10, delay="15m", units="s", timeout="60s",
@@ -274,9 +276,65 @@ api("mediatype.update", {"mediatypeid": mt, "status": 0, "smtp_server": "10.10.2
      "message": "Resuelto: {EVENT.RECOVERY.DATE} {EVENT.RECOVERY.TIME}\n" + CUERPO},
     {"eventsource": 0, "recovery": 2, "subject": "[ACTUALIZADO] {HOST.NAME}: {EVENT.NAME}",
      "message": "{USER.FULLNAME} actualizó el problema: {EVENT.UPDATE.MESSAGE}\n" + CUERPO}]})
+# ---------- Tickets en GLPI (mesa.evervc.dev): webhook propio por la API REST de GLPI ----------
+# Problema -> ticket de incidente (el n.º queda como etiqueta del evento __zbx_glpi_ticket); actualización -> seguimiento;
+# resuelto -> solución (el ticket pasa a «Resuelto»). Contraseña del usuario GLPI 'zabbix' en macro secreta.
+GLPI_JS = r"""
+var p = JSON.parse(value);
+function req(method, path, body, headers) {
+  var r = new HttpRequest(), resp, url = p.glpi_url + path;
+  r.addHeader('Content-Type: application/json');
+  for (var i = 0; i < headers.length; i++) { r.addHeader(headers[i]); }
+  if (method === 'GET') { resp = r.get(url); } else { resp = r.post(url, body ? JSON.stringify(body) : ''); }
+  var st = r.getStatus();
+  if (st < 200 || st >= 300) { throw 'GLPI ' + method + ' ' + path + ': HTTP ' + st + ' ' + resp; }
+  return resp ? JSON.parse(resp) : null;
+}
+var html = function (t) { return String(t).replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/\n/g, '<br>'); };
+var tok = req('GET', '/initSession', null, ['Authorization: Basic ' + btoa(p.glpi_user + ':' + p.glpi_pass)]).session_token;
+var H = ['Session-Token: ' + tok], out = {}, tid = p.ticket_id;
+if (!/^[0-9]+$/.test(tid || '')) { tid = ''; }   // sin ticket: la macro llega como *UNKNOWN* o sin resolver
+try {
+  if (p.event_value === '1' && p.event_update_status === '0' && !tid) {
+    var u = {'0': 1, '1': 2, '2': 2, '3': 3, '4': 4, '5': 5}[p.severity] || 3;
+    var yo = req('GET', '/getFullSession', null, H).session.glpiID;   // el ticket se asigna al propio usuario zabbix: así puede resolverlo
+    var t = req('POST', '/Ticket', {input: {name: p.subject, content: html(p.message), type: 1, urgency: u, impact: u,
+                                             itilcategories_id: parseInt(p.category_id, 10), _users_id_assign: yo}}, H);
+    out.tags = {'__zbx_glpi_ticket': String(t.id)};
+    Zabbix.log(4, '[GLPI] ticket ' + t.id + ' para el evento ' + p.event_id);
+  } else if (tid) {
+    var it = {itemtype: 'Ticket', items_id: parseInt(tid, 10)};
+    if (p.event_value === '0') { it.content = 'Resuelto automáticamente por el monitoreo (Zabbix).<br>' + html(p.message); req('POST', '/ITILSolution', {input: it}, H); }
+    else { it.content = html(p.message); req('POST', '/ITILFollowup', {input: it}, H); }
+  }
+} finally { try { req('GET', '/killSession', null, H); } catch (e) {} }
+return JSON.stringify(out);
+"""
+m = api("usermacro.get", {"globalmacro": True, "filter": {"macro": "{$GLPI_ZABBIX_PASS}"}})
+if m: api("usermacro.updateglobal", {"globalmacroid": m[0]["globalmacroid"], "value": os.environ["GLPI_ZABBIX_PASS"], "type": 1})
+else: api("usermacro.createglobal", {"macro": "{$GLPI_ZABBIX_PASS}", "value": os.environ["GLPI_ZABBIX_PASS"], "type": 1,
+                                     "description": "Usuario 'zabbix' de GLPI (API, tickets)"})
+GP = {"glpi_url": "http://10.10.20.31/apirest.php", "glpi_user": "zabbix", "glpi_pass": "{$GLPI_ZABBIX_PASS}",
+      "category_id": "1", "event_id": "{EVENT.ID}", "event_value": "{EVENT.VALUE}", "event_update_status": "{EVENT.UPDATE.STATUS}",
+      "severity": "{EVENT.NSEVERITY}", "ticket_id": "{EVENT.TAGS.__zbx_glpi_ticket}", "subject": "{ALERT.SUBJECT}", "message": "{ALERT.MESSAGE}"}
+MT_GLPI = {"name": "GLPI (mesa de servicio)", "type": 4, "status": 0, "script": GLPI_JS, "timeout": "30s",
+           "process_tags": 1, "show_event_menu": 1, "event_menu_name": "Ticket GLPI #{EVENT.TAGS.__zbx_glpi_ticket}",
+           "event_menu_url": "https://mesa.evervc.dev/front/ticket.form.php?id={EVENT.TAGS.__zbx_glpi_ticket}",
+           "description": "Abre, actualiza y resuelve tickets en GLPI (mesa.evervc.dev). Gestionado por zbx-setup.py",
+           "parameters": [{"name": k, "value": v} for k, v in GP.items()],
+           "message_templates": [
+               {"eventsource": 0, "recovery": 0, "subject": "[Zabbix] {HOST.NAME}: {EVENT.NAME}", "message": CUERPO},
+               {"eventsource": 0, "recovery": 1, "subject": "[RESUELTO] {HOST.NAME}: {EVENT.NAME}",
+                "message": "Resuelto: {EVENT.RECOVERY.DATE} {EVENT.RECOVERY.TIME} (duró {EVENT.DURATION})\n" + CUERPO},
+               {"eventsource": 0, "recovery": 2, "subject": "[ACTUALIZADO] {HOST.NAME}: {EVENT.NAME}",
+                "message": "{USER.FULLNAME} actualizó el problema: {EVENT.UPDATE.MESSAGE}\n" + CUERPO}]}
+g = api("mediatype.get", {"filter": {"name": MT_GLPI["name"]}, "output": ["mediatypeid"]})
+mt_glpi = (api("mediatype.update", {"mediatypeid": g[0]["mediatypeid"], **MT_GLPI}) if g else api("mediatype.create", MT_GLPI))["mediatypeids"][0]
+
 uid = api("user.get", {"filter": {"username": "Admin"}, "output": ["userid"]})[0]["userid"]
-api("user.update", {"userid": uid, "medias": [{"mediatypeid": mt, "sendto": ["ti@alcaldia.lab"], "active": 0,
-                                               "severity": 60, "period": "1-7,00:00-24:00"}]})   # 60 = advertencia y superiores
+api("user.update", {"userid": uid, "medias": [
+    {"mediatypeid": mt, "sendto": ["ti@alcaldia.lab"], "active": 0, "severity": 60, "period": "1-7,00:00-24:00"},   # 60 = advertencia y superiores
+    {"mediatypeid": mt_glpi, "sendto": ["mesa"], "active": 0, "severity": 56, "period": "1-7,00:00-24:00"}]})       # 56 = media y superiores -> ticket
 for a in api("action.get", {"filter": {"name": "Report problems to Zabbix administrators"}, "output": ["actionid"]}):
     api("action.update", {"actionid": a["actionid"], "status": 0})
 # Host "Zabbix server": se conserva la salud interna del servidor; sin agente en el contenedor -> fuera la plantilla de agente

@@ -3,6 +3,7 @@
 # Vive en el volumen persistente del equipo junto a respaldo.env (lo instala scripts/respaldo-setup.sh).
 # TIPO=rutas   -> RUTAS (homes de ts1, datos de archivo)
 # TIPO=pgdump  -> pg_dumpall de la BD local (incluye roles)
+# TIPO=mysqldump -> volcado completo de MariaDB (BD de GLPI), transacción consistente
 # TIPO=samba   -> samba-tool domain backup offline (copia completa del AD, recuperable con 'domain backup restore')
 # TIPO=mantenimiento (nas-a) -> retención (forget --prune) y verificación (check) del repositorio
 # Hora: HORA_UTC (08 = 02:00 en El Salvador). Retención: 7 diarias, 4 semanales, 12 mensuales.
@@ -15,6 +16,8 @@ uno() {
   case "$TIPO" in
     rutas)  restic backup -q --host "$EQUIPO" --tag "$EQUIPO" $EXCLUIR $RUTAS ;;
     pgdump) PGPASSWORD="$POSTGRES_PASSWORD" pg_dumpall -h 127.0.0.1 -U "$POSTGRES_USER" > "$TMP/$EQUIPO.sql" \
+              && restic backup -q --host "$EQUIPO" --tag "$EQUIPO" "$TMP" ;;
+    mysqldump) MYSQL_PWD="$MARIADB_ROOT_PASSWORD" mariadb-dump -uroot --all-databases --single-transaction --routines --events > "$TMP/$EQUIPO.sql" \
               && restic backup -q --host "$EQUIPO" --tag "$EQUIPO" "$TMP" ;;
     samba)  samba-tool domain backup offline --targetdir="$TMP" >/dev/null 2>&1 \
               && restic backup -q --host "$EQUIPO" --tag "$EQUIPO" "$TMP" ;;

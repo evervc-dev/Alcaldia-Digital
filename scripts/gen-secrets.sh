@@ -22,3 +22,7 @@ fill RESTIC_PASSWORD "$(rnd 40)"          # cifrado del repositorio restic (¡si
 fill RESTIC_S3_KEY "$(rnd 32)"            # usuario MinIO "restic" (escribe, no borra versiones)
 fill RESTIC_RO_KEY "$(rnd 32)"            # usuario MinIO "restic-lectura" (Zabbix)
 fill ZBX_SNMP_COMMUNITY "acc$(rnd 20)"          # comunidad SNMP de solo lectura (solo zbx-server)
+fill GLPI_DB_PASS "$(rnd 24)"              # MariaDB: usuario glpi
+fill GLPI_DB_ROOT_PASS "$(rnd 24)"         # MariaDB: root (solo local en glpi-db)
+fill GLPI_ADMIN_PASS "Glpi-$(rnd 16)-5w"   # cuenta local de emergencia 'glpi' (super-admin) de GLPI
+fill GLPI_ZABBIX_PASS "Zbx-$(rnd 20)-8t"     # usuario GLPI "zabbix" (API): Zabbix abre/cierra tickets

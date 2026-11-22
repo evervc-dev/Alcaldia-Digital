@@ -23,7 +23,7 @@ Camino de energía: **A** = UPS A / circuito A; **B** = UPS B / circuito B; **AB
 | dc1 | ACC-Samba-DC | AB | bond0 (eth0 → sw-a1 eth4, eth1 → sw-a2 eth4), VLAN 20, 10.10.20.10 |
 | usr-pc | ACC-PC | A | eth0 → sw-a1 eth5, VLAN 50, DHCP |
 | adm-pc | ACC-PC | AB | bond0 (eth0 → sw-a1 eth3, eth1 → sw-a2 eth3), VLAN 40, 10.10.40.50 |
-| dc1, authelia, redis, portal, portal-db, archivo, nginx-dmz, cloudflared-a, zbx-db, zbx-server, zbx-web, mailpit, nas-a | varias | AB | bond0 active-backup (eth0 → sw-a1, eth1 → sw-a2) |
+| dc1, authelia, redis, portal, portal-db, archivo, nginx-dmz, cloudflared-a, zbx-db, zbx-server, zbx-web, mailpit, nas-a, glpi (sw eth0/eth0), glpi-db (sw-a1 eth8, sw-a2 eth5) | varias | AB | bond0 active-backup (eth0 → sw-a1, eth1 → sw-a2) |
 
 ## Site B (Tier I)
 | Nodo | Plantilla | Energía | Interfaces |

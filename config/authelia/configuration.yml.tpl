@@ -42,6 +42,9 @@ access_control:
     - domain: 'archivo.evervc.dev'
       policy: two_factor
       subject: [['group:funcionarios'], ['group:acceso-24h']]
+    - domain: 'mesa.evervc.dev'          # mesa de servicio (GLPI): todo el personal abre tickets; perfil según grupo del AD
+      policy: two_factor
+      subject: [['group:funcionarios'], ['group:acceso-24h'], ['group:mesa-tecnicos'], ['group:mesa-admins']]
 session:
   secret: '${AUTHELIA_SESSION_SECRET}'
   cookies:

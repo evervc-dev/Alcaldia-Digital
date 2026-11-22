@@ -18,7 +18,8 @@
 | **Alta disponibilidad (Tier II)** | Si cae un firewall, un switch, un proveedor o un camino de energía, el servicio sigue | CARP + pfsync, doble ISP, enlaces dobles (bond) a dos switches, LACP |
 | **Sedes** | Cada sede llega al CD por 3 túneles cifrados con conmutación automática | Kit Docker (strongSwan + FRR + nftables + dnsmasq) tras CGNAT; OSPF elige el mejor túnel |
 | **Recuperación ante desastre** | Si se pierde el Site A, el portal vuelve desde el Site B | Réplica horaria de la BD, servicios en espera, cambio de DNS en Cloudflare (`dr-activar-b.sh`) |
-| **Monitoreo y alertas** | Ver el estado de la red y recibir correos cuando algo falla | Zabbix 7 (35 equipos, mapa de red) + correo a mailpit |
+| **Monitoreo y alertas** | Ver el estado de la red y recibir correos cuando algo falla | Zabbix 7 (38 equipos, mapa de red) + correo a mailpit + **ticket automático en GLPI** |
+| **Mesa de servicio** | El personal reporta incidencias; TI las atiende; las caídas abren tickets solas | GLPI 11 en `mesa.evervc.dev`, login único con el AD (perfil según grupo); Zabbix abre y resuelve tickets por la API |
 | **Respaldos** | Copia diaria cifrada, inmutable, en otro sitio y fuera de línea | restic → NAS con Object Lock **COMPLIANCE** → réplica a nas-b → cinta simulada |
 | **Acceso remoto de TI** | Administrar desde casa de forma segura | Cloudflare Zero Trust + **WARP**, solo para los correos autorizados |
 
@@ -34,6 +35,7 @@
 | `https://archivo.evervc.dev/` | Archivo documental (filebrowser), carpeta por usuario | Authelia + horario; usuario por cabecera `Remote-User` |
 | `https://auth.evervc.dev/` | Login único (Authelia): contraseña del AD + TOTP; 3 fallos ⇒ bloqueo de 5 min | — |
 | `https://monitor.evervc.dev/` | Zabbix (mapa, problemas, gráficas) | **Cloudflare Access** (PIN al correo del equipo TI) + login de Zabbix |
+| `https://mesa.evervc.dev/` | Mesa de servicio GLPI: el personal abre tickets (vista Helpdesk); TI los atiende | Authelia (AD + TOTP) + horario; GLPI entra solo con la cabecera `Remote-User` (SSO). Perfil: `mesa-tecnicos` → Technician, `mesa-admins` → Admin, resto → Self-Service. `/apirest.php` cerrado (403) |
 
 ### Solo con WARP (VPN de Cloudflare, correos autorizados)
 | Destino | Qué es |
@@ -48,6 +50,7 @@
 | GUI y SSH de los firewalls | Solo desde GESTION/ADMIN: `https://10.10.40.2`, `.3` y `https://10.20.40.1`; SSH **solo con clave** (`scripts/fw.sh`) |
 | Correo de pruebas (alertas) | mailpit `http://10.10.20.32:8025` |
 | Consola de los NAS | nas-a `http://10.10.60.10:9001`, nas-b `10.20.60.10:9001` (grupo `nas-admins` del AD) |
+| API de GLPI | `http://10.10.20.31/apirest.php`, solo desde la VLAN SERVIDORES (la usa Zabbix). Cuenta local de emergencia `glpi` (contraseña `GLPI_ADMIN_PASS` del `.env`) |
 
 ---
 
@@ -74,6 +77,7 @@
 | `archivo` | `10.10.20.21` | Archivo documental (filebrowser) |
 | `mailpit` | `10.10.20.32` | Buzón de pruebas: recibe alertas de Zabbix y correos de Authelia |
 | `zbx-server`, `zbx-web`, `zbx-db` | `.30`, `.33`, `.34` | Monitoreo Zabbix |
+| `glpi` / `glpi-db` | `10.10.20.31` / `.35` | Mesa de servicio GLPI 11 y su MariaDB 11.4 |
 | `ts1` | `10.10.20.40` | Escritorios XFCE por RDP, `/home` por usuario |
 | `lam` | `10.10.20.50` | Gestión de identidades (LDAP Account Manager) |
 | `nginx-dmz` / `cloudflared-a` | `10.10.30.10` / `.11` | Proxy inverso de la DMZ / conector Cloudflare Tunnel y WARP (QUIC) |
@@ -129,6 +133,8 @@
 | 13 | Crear un usuario en LAM (con WARP), dentro de `Sede-02` | Puede iniciar sesión en el portal (TOTP), en ts1 y en `puesto-01`; un gestor de sede no puede darle `acceso-24h` | — |
 | 14 | **Pérdida del Site A**: *Stop* de `fw-a1`, `fw-a2`, `wsw-a1`, `wsw-a2`, `cloudflared-a` → encender `portal-b`, `authelia-b`, `gate-b`, `archivo-b` → `bash scripts/dr-activar-b.sh` | El portal vuelve **servido por el Site B** («Site B» en la portada), con los trámites anteriores. Retorno: `bash scripts/dr-retorno-a.sh` | 86 s |
 | 15 | `bash scripts/tareas.sh ahora cinta` (o encender `tape` a mano) | Enciende `tape`, graba un cartucho con todos los respaldos (`/data/cartuchos/registro.log`) y lo **apaga** solo | ≈ 1 min en total |
+| 16 | *Stop* de `lam` (o de cualquier servidor) y luego *Start* | Zabbix abre un **ticket en GLPI** (`mesa.evervc.dev`, categoría «Infraestructura», asignado a `zabbix`, urgencia según la severidad). Al volver, el ticket pasa a **Resuelto** con la solución automática. En Zabbix, el problema tiene el enlace «Ticket GLPI #N» | ticket ≈ 60 s · cierre < 1 min |
+| 17 | Entrar a `mesa.evervc.dev` con `ana.funcionaria` y con `tecnico.soporte` | Ana ve la vista simple (crear/seguir sus tickets); el técnico ve la vista completa con todos los tickets. Ninguno escribe contraseña en GLPI (SSO) | — |
 
 Pruebas automáticas equivalentes: `scripts/test-zones.sh` (50 flujos), `scripts/f10-sonda.sh` (mide cortes) y `scripts/lab-check.sh` (estado general).
 
@@ -154,7 +160,7 @@ Pruebas automáticas equivalentes: `scripts/test-zones.sh` (50 flujos), `scripts
   - En un DR se marca `DR-ACTIVO` para que no la pise, y Cloudflare pasa a apuntar al túnel B.
   - El AD replica en continuo (DRS).
 - **Respaldos:**
-  - Cada noche a las 02:00, restic cifra y deduplica: homes de ts1, archivo, volcado del portal y backup del AD.
+  - Cada noche a las 02:00, restic cifra y deduplica: homes de ts1, archivo, volcado del portal, backup del AD, volcado de MariaDB de GLPI y `/var/glpi` (llave de cifrado y adjuntos).
   - Destino: nas-a, con versiones bloqueadas 7 días (ni root las borra), replicado a nas-b y copiable a cinta.
   - La cuenta de restic puede escribir, pero no destruir versiones.
 - **Monitoreo:**
@@ -162,6 +168,11 @@ Pruebas automáticas equivalentes: `scripts/test-zones.sh` (50 flujos), `scripts
   - Lee por SNMP el estado de los túneles y OSPF de los kits.
   - Lee la antigüedad de la réplica (ODBC), la de los respaldos (restic, solo lectura) y la ocupación del NAS.
   - Envía correos de problema y de «RESUELTO».
+  - Desde severidad *Media*, un webhook abre un ticket en GLPI (guarda su n.º como etiqueta del evento), añade seguimientos y lo resuelve al recuperarse.
+- **Mesa de servicio (GLPI):**
+  - nginx-dmz pasa el usuario autenticado (Authelia + horario) en `Remote-User`; Apache en `glpi` **descarta esa cabecera** si no viene de nginx-dmz (nadie de la VLAN puede suplantar).
+  - GLPI crea al usuario la primera vez con sus datos del AD (LDAPS a dc1, réplica dc2) y le asigna el perfil por su grupo (reglas).
+  - Notificaciones de GLPI por correo a mailpit. Todo se configura con `scripts/glpi-setup.sh` (idempotente).
 - **Seguridad perimetral:**
   - No hay puertos abiertos en Internet: todo entra por Cloudflare.
   - Firewall por zonas con mínimo privilegio y registro de bloqueos.
@@ -191,6 +202,7 @@ Pruebas automáticas equivalentes: `scripts/test-zones.sh` (50 flujos), `scripts
   - LAM solo por WARP.
 - **Publicación segura:** Cloudflare Tunnel, Zero Trust/WARP y Access para el monitoreo.
 - **Monitoreo:** Zabbix con alertas por correo, mapa de red y supervisión de túneles, réplica, NAS y respaldos.
+- **Mesa de servicio:** GLPI en `mesa.evervc.dev` con SSO del AD, perfiles por grupo y tickets automáticos desde Zabbix (abrir y resolver, probado).
 - **Respaldos 3-2-1:** WORM COMPLIANCE, réplica a nas-b, cinta y respaldo de configuraciones; resistentes al ransomware (probado).
 - **Tareas programadas:** respaldo de configuraciones diario y cinta semanal automáticos (temporizador systemd en el host), vigilados por Zabbix.
 - **Pruebas formales:** T1–T8 con evidencias; T9 documentada.
@@ -199,18 +211,17 @@ Pruebas automáticas equivalentes: `scripts/test-zones.sh` (50 flujos), `scripts
 - **Puesto Windows** para la defensa:
   - La guía está lista; falta tu plantilla QEMU.
   - Falta el **horario en Windows** (script de inicio en NETLOGON o `logonHours`).
-- **Servicios internos no disponibles en DR** (se quedan en el Site A): escritorios ts1, LAM y Zabbix.
+- **Servicios internos no disponibles en DR** (se quedan en el Site A): escritorios ts1, LAM, Zabbix y GLPI (sus respaldos sí están en nas-b).
 - **Sedes al perder `fw-a1`:** ≈ 23 s de corte, porque OPNsense no sincroniza las SA IPsec entre los dos firewalls.
 - **pf no filtra** el tráfico de las VTI dirigido al propio firewall. Está mitigado en los kits y con SSH/GUI restringidos.
 - **Tareas programadas en el host:** corren con tu sesión abierta (temporizador systemd de usuario); con el equipo apagado se recuperan en la primera hora con el lab encendido.
 - **Tarea manual:** la toma de roles FSMO en un DR largo está documentada, no ejecutada.
 - **Correo:** las alertas van a mailpit (buzón de pruebas), no a un correo real.
 - **Sistemas mínimos (portal, archivo):** son demostrativos y está previsto **actualizarlos después**. La arquitectura (Authelia, `gate`, cabecera `Remote-User`, réplica y respaldos) no cambia si se sustituye la aplicación.
-- **`mesa.evervc.dev`:** reservado en el plan para la mesa de servicio, no implementado.
 - **Repositorio de prueba roto** `respaldos/restic` en los NAS: inocuo, se puede borrar (ver `ESTADO.md`).
 
 ### ➕ Se puede agregar
-- **GLPI** (mesa de servicio en `mesa.evervc.dev`), con tickets automáticos desde Zabbix.
+- **GLPI:** inventario automático de equipos (agente GLPI), catálogo de servicios y SLA por categoría; recolector de correo para abrir tickets por email.
 - **Suricata** (IDS/IPS) en los OPNsense.
 - **oxidized** (interfaz web con el historial de configuraciones) en lugar de `backup-configs.sh` + git.
 - **Correo real** (SMTP saliente) para las alertas; alerta de cambios hechos en LAM.

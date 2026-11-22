@@ -1,0 +1,106 @@
+#!/bin/bash
+# GLPI (mesa de servicio, mesa.evervc.dev): configuración completa e idempotente. Nunca imprime secretos.
+#  1) SQL (glpi-db): API solo desde la VLAN SERVIDORES, idioma, URL pública, SSO por cabecera Remote-User
+#     (la fija nginx-dmz tras Authelia + horario), correo a mailpit, contraseña de 'glpi', cuentas de ejemplo desactivadas.
+#  2) API REST (desde el contenedor portal): directorio AD por LDAPS (dc1 + réplica dc2), reglas de perfil por grupo
+#     del AD (mesa-tecnicos -> Technician, mesa-admins -> Admin; el resto Self-Service), usuario 'zabbix' y categoría.
+#  3) SQL: el directorio AD completa los datos de los usuarios SSO; se limpia la caché.
+# Requiere: nodos glpi y glpi-db en marcha (services-setup.sh ya entregó glpi.env / db.env).
+set -euo pipefail; cd "$(dirname "$0")/.."; set -a; . ./.env; set +a
+PID=$(grep -l '"name": "ACC-Lab"' ~/GNS3/projects/*/*.gns3 | head -1 | xargs dirname | xargs basename)
+C() { echo "GNS3.$1.$PID"; }
+sql() { docker exec -i -e MYSQL_PWD="$GLPI_DB_ROOT_PASS" "$(C glpi-db)" mariadb -uroot -N glpi; }
+for i in $(seq 1 60); do echo 'select 1 from glpi_configs limit 1' | sql >/dev/null 2>&1 && break; sleep 5; done
+
+# ---------- 1) SQL ----------
+HASH=$(docker exec -e P="$GLPI_ADMIN_PASS" "$(C glpi)" php -r 'echo password_hash(getenv("P"), PASSWORD_DEFAULT);')
+cfg() { printf "INSERT INTO glpi_configs (context,name,value) VALUES ('core','%s','%s') ON DUPLICATE KEY UPDATE value=VALUES(value);\n" "$1" "$2"; }
+{
+  echo "UPDATE glpi_apiclients SET name='VLAN SERVIDORES (Zabbix, glpi-setup)', is_active=1, app_token=NULL,
+        ipv4_range_start=INET_ATON('10.10.20.0'), ipv4_range_end=INET_ATON('10.10.20.255') WHERE id=1;"
+  cfg enable_api 1; cfg enable_api_login_credentials 1; cfg enable_api_login_external_token 0
+  cfg url_base 'https://mesa.evervc.dev'; cfg url_base_api 'https://mesa.evervc.dev/apirest.php'
+  cfg language es_ES; cfg default_language es_ES 2>/dev/null
+  cfg ssovariables_id "$(echo "select id from glpi_ssovariables where name='HTTP_REMOTE_USER'" | sql)"
+  cfg is_users_auto_add 1; cfg ssologout_url 'https://auth.evervc.dev/logout'
+  cfg use_notifications 1; cfg notifications_mailing 1; cfg smtp_mode 1; cfg smtp_host 10.10.20.32; cfg smtp_port 1025
+  cfg smtp_check_certificate 0; cfg admin_email 'mesa@alcaldia.lab'; cfg admin_email_name 'Mesa de servicio - Alcaldía Digital'
+  cfg from_email 'mesa@alcaldia.lab'; cfg from_email_name 'Mesa de servicio - Alcaldía Digital'; cfg noreply_email 'no-reply@alcaldia.lab'
+  echo "UPDATE glpi_users SET password='$HASH', password_last_update=NOW() WHERE name='glpi';"
+  echo "UPDATE glpi_users SET is_active=0 WHERE name IN ('tech','normal','post-only');"
+} | sql
+echo "SQL: API (solo 10.10.20.0/24), español, URL pública, SSO Remote-User, correo -> mailpit, 'glpi' con contraseña del .env, cuentas de ejemplo desactivadas"
+
+# ---------- 2) API ----------
+docker exec -i -e GLPI_ADMIN_PASS -e GLPI_ZABBIX_PASS -e SVC_LDAP_PASS "$(C portal)" python3 - <<'PY'
+import base64, json, os, urllib.request, urllib.error
+U = "http://10.10.20.31/apirest.php"
+def call(method, path, body=None, auth=None):
+    h = {"Content-Type": "application/json"}
+    if auth: h["Authorization"] = auth
+    else: h["Session-Token"] = TOK
+    r = urllib.request.Request(U + path, json.dumps(body).encode() if body is not None else None, h, method=method)
+    try:
+        with urllib.request.urlopen(r, timeout=30) as f:
+            t = f.read(); return json.loads(t) if t else None
+    except urllib.error.HTTPError as e:
+        raise SystemExit(f"API {method} {path}: {e.code} {e.read()[:300]!r}")
+TOK = call("GET", "/initSession", auth="Basic " + base64.b64encode(b"glpi:" + os.environ["GLPI_ADMIN_PASS"].encode()).decode())["session_token"]
+
+def find(itemtype, **flt):
+    for it in call("GET", f"/{itemtype}?range=0-999&expand_dropdowns=false") or []:
+        if all(str(it.get(k)) == str(v) for k, v in flt.items()): return it
+def upsert(itemtype, key, data):
+    it = find(itemtype, **key)
+    if it:
+        call("PUT", f"/{itemtype}/{it['id']}", {"input": data}); return it["id"]
+    return call("POST", f"/{itemtype}", {"input": {**key, **data}})["id"]
+
+BASE = "DC=ad,DC=alcaldia,DC=lab"
+ldap = upsert("AuthLDAP", {"name": "AD alcaldia.lab (dc1)"}, {
+    "host": "ldaps://10.10.20.10", "port": 636, "basedn": BASE, "use_dn": 1,
+    "rootdn": "svc-lectura@ad.alcaldia.lab", "rootdn_passwd": os.environ["SVC_LDAP_PASS"],
+    "condition": "(&(objectClass=user)(objectCategory=person)(!(userAccountControl:1.2.840.113556.1.4.803:=2)))",
+    "login_field": "samaccountname", "sync_field": "objectguid", "email1_field": "mail",
+    "realname_field": "sn", "firstname_field": "givenname", "title_field": "title",
+    "group_search_type": 0, "group_field": "memberof", "group_condition": "(objectClass=group)", "group_member_field": "member",
+    "is_active": 1, "is_default": 1, "timeout": 5, "comment": "Directorio del AD (LDAPS con la CA del laboratorio). Gestionado por glpi-setup.sh"})
+upsert("AuthLdapReplicate", {"authldaps_id": ldap, "name": "dc2 (Site B)"}, {"host": "ldaps://10.20.20.10", "port": 636, "timeout": 5})
+print(f"API: directorio AD id={ldap} (dc1 + réplica dc2, LDAPS)")
+
+PROF = {p["name"]: p["id"] for p in call("GET", "/Profile?range=0-50")}
+for nombre, grupo, perfil in (("ACC: técnicos de la mesa (AD mesa-tecnicos)", "mesa-tecnicos", "Technician"),
+                              ("ACC: administradores de la mesa (AD mesa-admins)", "mesa-admins", "Admin")):
+    rid = upsert("RuleRight", {"name": nombre}, {"sub_type": "RuleRight", "match": "AND", "is_active": 1, "entities_id": 0,
+                                              "is_recursive": 1, "description": f"Perfil {perfil} para el grupo {grupo} del AD"})
+    for c in call("GET", f"/RuleRight/{rid}/RuleCriteria") or []: call("DELETE", f"/RuleCriteria/{c['id']}")
+    for a in call("GET", f"/RuleRight/{rid}/RuleAction") or []: call("DELETE", f"/RuleAction/{a['id']}")
+    call("POST", "/RuleCriteria", {"input": {"rules_id": rid, "criteria": "memberof", "condition": 2,
+                                              "pattern": f"CN={grupo},CN=Users,{BASE}"}})
+    for f, v in (("profiles_id", PROF[perfil]), ("entities_id", 0), ("is_recursive", 1), ("_profiles_id_default", PROF[perfil])):
+        call("POST", "/RuleAction", {"input": {"rules_id": rid, "action_type": "assign", "field": f, "value": v}})
+    print(f"API: regla «{grupo}» -> perfil {perfil}")
+
+zu = find("User", name="zabbix")   # la contraseña solo al crear: GLPI rechaza reutilizarla (historial de contraseñas)
+datos = {"realname": "Zabbix", "firstname": "Monitoreo", "is_active": 1, "comment": "Cuenta de servicio: Zabbix abre y cierra tickets por la API"}
+if zu: call("PUT", f"/User/{zu['id']}", {"input": datos}); zid = zu["id"]
+else: zid = call("POST", "/User", {"input": {"name": "zabbix", **datos, "password": os.environ["GLPI_ZABBIX_PASS"],
+                                              "password2": os.environ["GLPI_ZABBIX_PASS"]}})["id"]
+pus = call("GET", f"/User/{zid}/Profile_User") or []
+if not any(str(pu.get("profiles_id")) == str(PROF["Technician"]) for pu in pus):
+    call("POST", "/Profile_User", {"input": {"users_id": zid, "profiles_id": PROF["Technician"], "entities_id": 0, "is_recursive": 1}})
+for pu in pus:   # GLPI le añade Self-Service al crearlo: la sesión API entraría con él y no podría resolver tickets
+    if str(pu.get("profiles_id")) != str(PROF["Technician"]): call("DELETE", f"/Profile_User/{pu['id']}")
+call("PUT", f"/User/{zid}", {"input": {"profiles_id": PROF["Technician"]}})   # perfil por defecto
+cat = upsert("ITILCategory", {"name": "Infraestructura (alerta de Zabbix)"}, {"comment": "Tickets abiertos automáticamente por el monitoreo",
+                                                                            "is_helpdeskvisible": 0})
+print(f"API: usuario zabbix (Technician), categoría {cat}")
+call("GET", "/killSession")
+open("/tmp/glpi-ldap-id", "w").write(str(ldap))
+PY
+
+# ---------- 3) SQL ----------
+LID=$(docker exec "$(C portal)" cat /tmp/glpi-ldap-id)
+{ cfg authldaps_id_extra "$LID"; cfg existing_auth_server_field_clean_domain 1; } | sql
+docker exec "$(C glpi)" setpriv --reuid=www-data --regid=www-data --init-groups -- php /var/www/glpi/bin/console cache:clear -q >/dev/null 2>&1 || true
+echo "SSO: datos de usuario desde el directorio AD id=$LID; caché limpiada. Listo: https://mesa.evervc.dev"

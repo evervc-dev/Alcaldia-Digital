@@ -168,3 +168,13 @@ Pruebas formales T1–T13 con evidencias: failover Tier II (ya medido, re-docume
   Arreglo: **vigía en fw-b** (`acc_vigia_ipsec()` en `wan-ab.inc.php`): `/usr/local/sbin/acc-vigia-ipsec.sh` + acción configd `acc vigia-ipsec` + cron de OPNsense cada minuto (lo ejecuta como `nobody`, vía configd).
   Probado terminando el túnel ISP1: relanzado en 60 s (`grep acc-vigia /var/log/system/latest.log`).
 - **Zabbix «no se puede comprobar el respaldo» tras reiniciar el PC:** el enlace `/usr/lib/zabbix/externalscripts/restic-ultimo.sh` se perdía al recrearse el contenedor (el script está en el volumen `/etc/acc`). Ahora lo crea el `entrypoint` de `acc/zabbix-*` al arrancar (imagen reconstruida).
+
+## Hecho: mesa de servicio GLPI (ver docs/pruebas/F11-mesa-servicio.md)
+- Nodos `glpi` (10.10.20.31) y `glpi-db` (10.10.20.35); `mesa.evervc.dev` con Authelia + horario + SSO `Remote-User`; perfiles por grupo AD (`mesa-tecnicos`, `mesa-admins`); Zabbix abre/resuelve tickets (webhook); respaldos diarios.
+- Reconstruir: `build-images.sh` → `gns3-templates.sh` → crear nodos + enlaces (glpi: sw-a1 eth0 / sw-a2 eth0; glpi-db: sw-a1 eth8 / sw-a2 eth5) → `deploy-config.sh ACC-Lab glpi glpi-db sw-a1 sw-a2 nginx-dmz` → `gen-secrets.sh` → `services-setup.sh` → reiniciar glpi/glpi-db/authelia → `glpi-setup.sh` → `zbx-setup.sh` → `respaldo-setup.sh` → `cf-setup.sh`.
+
+## Errores conocidos / gotchas (GLPI)
+- **No cambiar propiedades de un nodo Docker cuya imagen se reconstruyó** (p. ej. `environment`): GNS3 borró el contenedor y el nodo quedó inservible. Recrear el nodo.
+- La cuenta `zabbix` de GLPI debe tener **solo** Technician como perfil por defecto (si no, la API entra como Self-Service y no puede resolver).
+- `glpi-setup.sh` no cambia contraseñas ya puestas (GLPI rechaza reutilizarlas). Para rotar `GLPI_ZABBIX_PASS`: cambiarla en GLPI, en `.env` y volver a ejecutar `zbx-setup.sh` (macro secreta).
+- GLPI no está en el DR (como Zabbix y LAM): `mesa.evervc.dev` no se mueve al Site B; se restaura desde los respaldos si hiciera falta.

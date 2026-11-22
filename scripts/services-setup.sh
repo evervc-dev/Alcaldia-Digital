@@ -41,3 +41,8 @@ if [ "$SITE" = A ]; then
   printf "DB_SERVER_HOST='10.10.20.34'\nPOSTGRES_USER='zabbix'\nPOSTGRES_PASSWORD='%s'\nPOSTGRES_DB='zabbix'\nZBX_STARTPINGERS='5'\nZBX_STARTHTTPPOLLERS='5'\nZBX_TIMEOUT='10'\n" "$ZABBIX_DB_PASS" | put zbx-server /etc/acc/zbx.env
   printf "DB_SERVER_HOST='10.10.20.34'\nPOSTGRES_USER='zabbix'\nPOSTGRES_PASSWORD='%s'\nPOSTGRES_DB='zabbix'\nZBX_SERVER_HOST='10.10.20.30'\nZBX_SERVER_NAME='Alcaldía Digital'\nPHP_TZ='America/El_Salvador'\n" "$ZABBIX_DB_PASS" | put zbx-web /etc/acc/zbx.env
 fi
+# --- GLPI, mesa de servicio (solo Site A) ---
+if [ "$SITE" = A ]; then
+  printf "MARIADB_ROOT_PASSWORD='%s'\nMARIADB_DATABASE='glpi'\nMARIADB_USER='glpi'\nMARIADB_PASSWORD='%s'\nMARIADB_AUTO_UPGRADE='1'\n" "$GLPI_DB_ROOT_PASS" "$GLPI_DB_PASS" | put glpi-db /etc/acc/db.env
+  printf "GLPI_DB_HOST='10.10.20.35'\nGLPI_DB_PORT='3306'\nGLPI_DB_NAME='glpi'\nGLPI_DB_USER='glpi'\nGLPI_DB_PASSWORD='%s'\n" "$GLPI_DB_PASS" | put glpi /etc/acc/glpi.env
+fi

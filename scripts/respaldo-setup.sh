@@ -16,6 +16,8 @@ EQUIPOS=(
   "archivo|/config/acc|rutas|/srv /database|08|"
   "portal-db|/etc/acc|pgdump||08|. /etc/acc/pg.env"
   "dc1|/var/lib/samba/acc|samba||08|"
+  "glpi-db|/etc/acc|mysqldump||08|. /etc/acc/db.env"
+  "glpi|/etc/acc|rutas|/var/glpi|08|EXCLUIR='--exclude /var/glpi/files/_cache --exclude /var/glpi/files/_sessions --exclude /var/glpi/files/_tmp'"
   "nas-a|/data/.acc|mantenimiento||10|"
 )
 for e in "${EQUIPOS[@]}"; do
@@ -54,14 +56,14 @@ echo "zbx-server: comprobación de respaldos instalada (solo lectura)"
 
 if [ "${1:-}" = ahora ]; then
   echo "== primer respaldo"
-  for n in ts1 archivo portal-db dc1; do
+  for n in ts1 archivo portal-db dc1 glpi-db glpi; do
     dir=$(printf '%s\n' "${EQUIPOS[@]}" | awk -F'|' -v n=$n '$1==n{print $2}')
     printf "%s: " "$n"; docker exec "$(C $n)" "$dir/respaldo.sh" ahora | sed 's/^[^ ]* //'
   done
 fi
 
 # Cinta LTO simulada (nodo tape, Site B): credenciales de SOLO LECTURA de nas-b. Se enciende -> copia -> se apaga.
-if docker inspect "$(C tape)" >/dev/null 2>&1; then
+if docker inspect -f "{{.State.Running}}" "$(C tape)" 2>/dev/null | grep -q true; then   # apagado (lo normal): cinta.env ya persiste en su volumen
   printf "NAS_B='10.20.60.10'\nCLAVE_LECTURA='%s'\n" "$RESTIC_RO_KEY" | docker exec -i "$(C tape)" sh -c 'mkdir -p /data/.acc; umask 077; cat > /data/.acc/cinta.env'
   echo "tape: cinta.env instalado (al reiniciar el nodo grabará un cartucho)"
 fi

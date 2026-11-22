@@ -41,7 +41,7 @@ En las sedes: LAN 10.100.N.0/24, GW .1 (kit), DHCP .100–.199; `pc-0N-a` → .1
 | portal-db | 10.10.20.22 | 10.20.20.22 (réplica) |
 | archivo | 10.10.20.21 | 10.20.20.21 |
 | zbx-server / zbx-web / zbx-db | 10.10.20.30 / .33 / .34 | — (respaldo diario de la BD a nas-b) |
-| glpi (opcional) | 10.10.20.31 | — |
+| glpi / glpi-db (mesa de servicio) | 10.10.20.31 / 10.10.20.35 | — (respaldo diario a nas-a/nas-b) |
 | mailpit | 10.10.20.32 | — |
 | nginx-dmz | 10.10.30.10 | 10.20.30.10 |
 | cloudflared | 10.10.30.11 | 10.20.30.11 |
