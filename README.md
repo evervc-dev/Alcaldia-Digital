@@ -18,3 +18,6 @@ bash scripts/pull-images.sh     # imágenes oficiales con versión fijada
 bash scripts/build-images.sh    # imágenes propias acc/*
 bash scripts/gns3-templates.sh  # plantillas ACC-* en GNS3
 ```
+
+## Operación diaria
+Apagar y encender el laboratorio: [APAGAR-ENCENDER.md](APAGAR-ENCENDER.md)

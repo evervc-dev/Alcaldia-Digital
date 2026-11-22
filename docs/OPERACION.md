@@ -1,5 +1,7 @@
 # Operación del laboratorio: apagar y encender
 
+> Resumen rápido paso a paso: **[APAGAR-ENCENDER.md](../APAGAR-ENCENDER.md)** (incluye Zabbix, sedes y puesto-01).
+
 ## Apagar (fin de jornada)
 1. En la GUI de GNS3: **File → Close project** (o el botón ■ *Stop all* y luego cerrar). GNS3 detiene los nodos; los OPNsense hacen un apagado ACPI (≈1–2 min). **Esperar** a que termine.
 2. Cerrar la GUI y apagar el equipo con normalidad.
