@@ -54,4 +54,6 @@ except Exception: print("?")')
 done
 chk "nas-a: Object Lock COMPLIANCE en respaldos" "docker exec GNS3.nas-a.$P sh -c 'mc retention info --default a/respaldos 2>/dev/null | grep -q COMPLIANCE'"
 
+chk "temporizador acc-tareas activo (configs diario, cinta semanal)" "systemctl --user is-active acc-tareas.timer"
+chk "tape APAGADO (cinta fuera de línea)" "! docker inspect -f '{{.State.Running}}' GNS3.tape.$P 2>/dev/null | grep -q true"
 echo; [ $FAIL = 0 ] && echo "RESULTADO: todo OK" || echo "RESULTADO: $FAIL comprobación(es) fallida(s) — ver ESTADO.md (gotchas)"

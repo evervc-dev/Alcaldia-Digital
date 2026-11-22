@@ -219,4 +219,42 @@ function wan_ab_apply($side, $routerid, $passive) {
     }
     Config::getInstance()->save();
     echo "ok: ospf-interfaces (" . (count(WAN_AB_TUNNELS) + count(sede_tunnels($side)) + count($passive)) . ")\n";
+
+    if ($side === 'b') { acc_vigia_ipsec(); }
+}
+
+/*
+ * Vigía de los túneles A<->B (solo en fw-b, que es quien INICIA). En un arranque en frío, si fw-b intenta antes de que
+ * fw-a1 tenga IPsec cargado recibe NO_PROPOSAL_CHOSEN y strongSwan NO reintenta (error permanente): A<->B quedaba caído
+ * hasta intervención manual. Cron de OPNsense cada minuto: relanza cada hijo con "dpd action start" que no tenga SA.
+ */
+function acc_vigia_ipsec() {
+    file_put_contents('/usr/local/sbin/acc-vigia-ipsec.sh', <<<'SH'
+#!/bin/sh
+# ACC: relanza los túneles IPsec que este firewall inicia (dpd action start) si no tienen SA instalada.
+swanctl --list-conns 2>/dev/null | awk '/^[^ ].*: IKEv/ {ike=$1; sub(/:$/, "", ike)}
+  /^  [^ ]+: TUNNEL.*dpd action is start/ {c=$1; sub(/:$/, "", c); print ike, c}' |
+while read ike child; do
+  swanctl --list-sas --ike "$ike" 2>/dev/null | grep -q INSTALLED && continue
+  logger -t acc-vigia "túnel $ike sin SA: se relanza"
+  swanctl --initiate --ike "$ike" --child "$child" --timeout 10 >/dev/null 2>&1 &
+done
+wait
+SH
+    );
+    chmod('/usr/local/sbin/acc-vigia-ipsec.sh', 0755);
+    file_put_contents('/usr/local/opnsense/service/conf/actions.d/actions_acc.conf',
+        "[vigia-ipsec]\ncommand:/usr/local/sbin/acc-vigia-ipsec.sh\nparameters:\ntype:script\n" .
+        "message:ACC vigia de tuneles A-B\ndescription:ACC: relanza los tuneles IPsec A-B sin SA\n");
+    exec('/usr/sbin/service configd restart >/dev/null 2>&1');
+    sleep(2);
+    $cron = new \OPNsense\Cron\Cron();
+    $job = null;
+    foreach ($cron->jobs->job->iterateItems() as $j) { if ((string)$j->command === 'acc vigia-ipsec') { $job = $j; } }
+    if (!$job) { $job = $cron->jobs->job->Add(); }
+    $job->setNodes(['enabled' => '1', 'minutes' => '*', 'hours' => '*', 'days' => '*', 'months' => '*', 'weekdays' => '*',
+        'who' => 'root', 'command' => 'acc vigia-ipsec', 'parameters' => '', 'description' => 'ACC: vigía de túneles A<->B']);
+    save_model($cron, 'cron-vigia-ipsec');
+    Config::getInstance()->save();
+    exec('/usr/local/sbin/configctl cron restart >/dev/null 2>&1');
 }

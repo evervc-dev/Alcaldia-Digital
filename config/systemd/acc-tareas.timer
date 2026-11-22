@@ -1,0 +1,11 @@
+[Unit]
+Description=ACC-Lab: comprobar cada hora si toca alguna tarea programada
+
+[Timer]
+OnCalendar=hourly
+OnStartupSec=10min
+RandomizedDelaySec=2min
+Persistent=true
+
+[Install]
+WantedBy=timers.target

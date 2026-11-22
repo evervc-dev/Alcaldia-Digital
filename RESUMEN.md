@@ -91,7 +91,7 @@
 | `portal-b`, `authelia-b`, `gate-b`, `archivo-b` | **Apagados en espera**: se encienden solo en un DR |
 | `nginx-dmz-b`, `cloudflared-b` | DMZ y túnel del Site B (siempre conectado, sin tráfico hasta el DR) |
 | `nas-b` | Copia replicada de los respaldos |
-| `tape` | Cinta LTO simulada: **apagada** (fuera de línea); al encenderla graba un cartucho |
+| `tape` | Cinta LTO simulada: **apagada** (fuera de línea); al encenderla graba un cartucho. La tarea semanal la enciende, graba y la apaga sola |
 | `adm-pc-b` | PC de administración del Site B |
 
 ### Sedes (`10.100.N.0/24`, N = 1..3)
@@ -128,7 +128,7 @@
 | 12 | Desde `pc-01-a`: `nc -z -w3 10.100.2.1 53` o `nc -z -w3 10.10.40.2 443` | Bloqueado: ni otras sedes ni la gestión del CD son alcanzables | — |
 | 13 | Crear un usuario en LAM (con WARP), dentro de `Sede-02` | Puede iniciar sesión en el portal (TOTP), en ts1 y en `puesto-01`; un gestor de sede no puede darle `acceso-24h` | — |
 | 14 | **Pérdida del Site A**: *Stop* de `fw-a1`, `fw-a2`, `wsw-a1`, `wsw-a2`, `cloudflared-a` → encender `portal-b`, `authelia-b`, `gate-b`, `archivo-b` → `bash scripts/dr-activar-b.sh` | El portal vuelve **servido por el Site B** («Site B» en la portada), con los trámites anteriores. Retorno: `bash scripts/dr-retorno-a.sh` | 86 s |
-| 15 | Encender `tape` y esperar ~1 min | Graba un cartucho con todos los respaldos (`/data/cartuchos/registro.log`); **apagarla después** | ≈ 1 s de copia |
+| 15 | `bash scripts/tareas.sh ahora cinta` (o encender `tape` a mano) | Enciende `tape`, graba un cartucho con todos los respaldos (`/data/cartuchos/registro.log`) y lo **apaga** solo | ≈ 1 min en total |
 
 Pruebas automáticas equivalentes: `scripts/test-zones.sh` (50 flujos), `scripts/f10-sonda.sh` (mide cortes) y `scripts/lab-check.sh` (estado general).
 
@@ -170,7 +170,7 @@ Pruebas automáticas equivalentes: `scripts/test-zones.sh` (50 flujos), `scripts
 - **Infraestructura como código:**
   - Todo se reconstruye con `scripts/` y `config/`.
   - Los secretos solo están en `.env` (fuera de git).
-  - Las configuraciones de red se guardan saneadas en `configs/` (`backup-configs.sh`).
+  - Las configuraciones de red se guardan saneadas en `configs/` (`backup-configs.sh`), **cada 24 h de forma automática** (`acc-tareas.timer` → `scripts/tareas.sh`, con commit local y aviso en Zabbix si falla o no se ejecuta).
 
 ---
 
@@ -192,6 +192,7 @@ Pruebas automáticas equivalentes: `scripts/test-zones.sh` (50 flujos), `scripts
 - **Publicación segura:** Cloudflare Tunnel, Zero Trust/WARP y Access para el monitoreo.
 - **Monitoreo:** Zabbix con alertas por correo, mapa de red y supervisión de túneles, réplica, NAS y respaldos.
 - **Respaldos 3-2-1:** WORM COMPLIANCE, réplica a nas-b, cinta y respaldo de configuraciones; resistentes al ransomware (probado).
+- **Tareas programadas:** respaldo de configuraciones diario y cinta semanal automáticos (temporizador systemd en el host), vigilados por Zabbix.
 - **Pruebas formales:** T1–T8 con evidencias; T9 documentada.
 
 ### 🟡 A medias / limitaciones conocidas
@@ -201,9 +202,8 @@ Pruebas automáticas equivalentes: `scripts/test-zones.sh` (50 flujos), `scripts
 - **Servicios internos no disponibles en DR** (se quedan en el Site A): escritorios ts1, LAM y Zabbix.
 - **Sedes al perder `fw-a1`:** ≈ 23 s de corte, porque OPNsense no sincroniza las SA IPsec entre los dos firewalls.
 - **pf no filtra** el tráfico de las VTI dirigido al propio firewall. Está mitigado en los kits y con SSH/GUI restringidos.
-- **Tareas manuales:**
-  - `backup-configs.sh` y la cinta se lanzan a mano (no hay tarea programada).
-  - La toma de roles FSMO en un DR largo está documentada, no ejecutada.
+- **Tareas programadas en el host:** corren con tu sesión abierta (temporizador systemd de usuario); con el equipo apagado se recuperan en la primera hora con el lab encendido.
+- **Tarea manual:** la toma de roles FSMO en un DR largo está documentada, no ejecutada.
 - **Correo:** las alertas van a mailpit (buzón de pruebas), no a un correo real.
 - **Sistemas mínimos (portal, archivo):** son demostrativos y está previsto **actualizarlos después**. La arquitectura (Authelia, `gate`, cabecera `Remote-User`, réplica y respaldos) no cambia si se sustituye la aplicación.
 - **`mesa.evervc.dev`:** reservado en el plan para la mesa de servicio, no implementado.
@@ -212,7 +212,7 @@ Pruebas automáticas equivalentes: `scripts/test-zones.sh` (50 flujos), `scripts
 ### ➕ Se puede agregar
 - **GLPI** (mesa de servicio en `mesa.evervc.dev`), con tickets automáticos desde Zabbix.
 - **Suricata** (IDS/IPS) en los OPNsense.
-- **Tareas programadas:** `backup-configs.sh` diario, o **oxidized** para guardar las configuraciones de red.
+- **oxidized** (interfaz web con el historial de configuraciones) en lugar de `backup-configs.sh` + git.
 - **Correo real** (SMTP saliente) para las alertas; alerta de cambios hechos en LAM.
 - **Más disponibilidad en el DR:** Zabbix secundario o *proxy* en el Site B; escritorios de contingencia en B.
 - **WebAuthn/llaves de seguridad** en Authelia, además de TOTP.

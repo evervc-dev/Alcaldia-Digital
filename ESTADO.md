@@ -157,3 +157,14 @@ Pruebas formales T1–T13 con evidencias: failover Tier II (ya medido, re-docume
 - Al conmutar DNS (DR) Cloudflare tarda 1–2 min en propagar: respuestas mixtas durante ese tiempo.
 - Durante un DR, `portal-db-b` tiene `/etc/acc/DR-ACTIVO`: no se pisa con la réplica. El retorno la retira; reiniciar el nodo.
 - Para pruebas con `ip link set ethX down` en los ISP basta `ip link set ethX up` (rutas conectadas); en los kits hay que restaurar la ruta por defecto.
+
+## Extras tras F10 (22/11)
+- **Tareas programadas** (`scripts/tareas.sh`, temporizador `acc-tareas.timer` de systemd --user; instalar: `scripts/tareas-instalar.sh`):
+  respaldo de configuraciones cada 24 h (+ commit local de `configs/`) y cinta cada 7 días (enciende `tape` por la API de GNS3, graba y lo apaga).
+  Resultado a Zabbix (host `tareas-programadas`, trapper `acc.tarea[configs|cinta]`): alerta si falla o si no hay dato en 26 h / 8 d.
+- Gotchas: los OPNsense son QEMU (no aparecen en `docker inspect`); la cinta graba **al arrancar** el nodo, así que si `tape` quedó encendido la tarea lo apaga y lo vuelve a encender.
+  Las tareas corren mientras la sesión del usuario está abierta (sin *linger*); si el lab está apagado se reintenta cada hora.
+- **Incidente 22/11 (arranque en frío):** A↔B estuvo caído desde las 08:26 hasta las 11:45. fw-b arrancó antes que fw-a1, recibió `NO_PROPOSAL_CHOSEN` y strongSwan no reintenta ese error (mismo caso que los kits).
+  Arreglo: **vigía en fw-b** (`acc_vigia_ipsec()` en `wan-ab.inc.php`): `/usr/local/sbin/acc-vigia-ipsec.sh` + acción configd `acc vigia-ipsec` + cron de OPNsense cada minuto (lo ejecuta como `nobody`, vía configd).
+  Probado terminando el túnel ISP1: relanzado en 60 s (`grep acc-vigia /var/log/system/latest.log`).
+- **Zabbix «no se puede comprobar el respaldo» tras reiniciar el PC:** el enlace `/usr/lib/zabbix/externalscripts/restic-ultimo.sh` se perdía al recrearse el contenedor (el script está en el volumen `/etc/acc`). Ahora lo crea el `entrypoint` de `acc/zabbix-*` al arrancar (imagen reconstruida).

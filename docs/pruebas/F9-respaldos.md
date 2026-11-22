@@ -8,8 +8,8 @@ Fase 4: regla 3-2-1 con copia inmutable; RPO 24 h para datos de usuario (1 h par
 | 1. Copia diaria | **restic** (cifrado AES-256, deduplicado) a las **02:00** hora local | Cada servidor sube a `nas-a` → bucket `respaldos/repo` |
 | 2. Inmutable | **Object Lock COMPLIANCE 7 días** + versionado: nadie (ni root) borra o acorta la retención | nas-a y nas-b |
 | 3. Fuera del sitio | Replicación `nas-a → nas-b` (Site B) **sin propagar borrados de versiones** | nas-b |
-| 4. Fuera de línea | Cinta LTO simulada `tape` (Site B): al encenderla graba un cartucho fechado desde nas-b; luego se **apaga** (air gap) | tape 10.20.60.20 |
-| Configuraciones | `scripts/backup-configs.sh`: copia completa (WORM) en el NAS + copia **saneada** versionada en `configs/` | nas-a + git |
+| 4. Fuera de línea | Cinta LTO simulada `tape` (Site B): al encenderla graba un cartucho fechado desde nas-b; luego se **apaga** (air gap) | tape 10.20.60.20 (automática cada 7 días: `scripts/tareas.sh`) |
+| Configuraciones | `scripts/backup-configs.sh`: copia completa (WORM) en el NAS + copia **saneada** versionada en `configs/`, automática cada 24 h (`acc-tareas.timer`) | nas-a + git |
 | Mantenimiento | nas-a 04:00: `restic forget` (7 diarias, 4 semanales, 12 mensuales) `--prune` + `restic check` | nas-a |
 
 | Equipo | Qué se respalda |

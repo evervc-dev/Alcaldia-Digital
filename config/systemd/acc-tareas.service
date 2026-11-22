@@ -1,0 +1,7 @@
+[Unit]
+Description=ACC-Lab: tareas programadas (respaldo de configuraciones diario, cinta semanal)
+
+[Service]
+Type=oneshot
+ExecStart=/bin/bash @REPO@/scripts/tareas.sh
+TimeoutStartSec=30min

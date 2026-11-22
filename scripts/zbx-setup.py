@@ -240,6 +240,19 @@ for eq in ("ts1", "archivo", "portal-db", "dc1"):
     trigger(hid, f"{eq}: no se puede comprobar el respaldo", f"nodata(/{eq}/{key},2h)=1", SEV["average"],
             "Zabbix no puede leer el repositorio restic en nas-a.")
 
+# ---------- Tareas programadas (scripts/tareas.sh en el host, systemd --user cada hora) ----------
+# Trapper: el script envía 1 (OK) o 0 (fallo) con zabbix_sender. Sin dato en el plazo -> la tarea no se ejecuta.
+hid, _ = host("tareas-programadas", None, "Site A",
+              desc="Tareas automáticas: respaldo de configuraciones de red (diario) y cinta LTO (semanal). Registro: ~/.local/state/acc/tareas.log")
+HOSTS["tareas-programadas"] = hid
+for tarea, nombre, plazo in (("configs", "Respaldo de configuraciones de red", "26h"), ("cinta", "Grabación de cinta (nodo tape)", "8d")):
+    key = f"acc.tarea[{tarea}]"
+    item(hid, None, f"{nombre}: resultado (1 = OK)", key, type=2, delay="0", value_type=3)
+    trigger(hid, f"{nombre}: FALLÓ", f"last(/tareas-programadas/{key})=0", SEV["high"],
+            "Ver ~/.local/state/acc/tareas.log en el host. Repetir: scripts/tareas.sh ahora " + tarea)
+    trigger(hid, f"{nombre}: no se ejecuta (sin resultado en {plazo})", f"nodata(/tareas-programadas/{key},{plazo})=1",
+            SEV["average"], "¿Temporizador instalado? systemctl --user list-timers acc-tareas.timer")
+
 # ---------- Servicio público (ruta Internet -> Cloudflare -> túnel -> DMZ) ----------
 hid, _ = host("internet-evervc", None, "Internet", desc="Servicios publicados en Internet vía Cloudflare Tunnel.")
 HOSTS["internet-evervc"] = hid

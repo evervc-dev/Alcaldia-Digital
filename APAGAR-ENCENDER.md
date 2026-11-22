@@ -55,7 +55,7 @@
 |---|---|
 | `fw-a1` no es MASTER de las 8 VIP CARP | `bash scripts/fw.sh fw-a1 'sysctl net.inet.carp.demotion=-240'` |
 | Portal público da 502/530 | Reiniciar el nodo `cloudflared-a` |
-| OSPF A↔B con menos de 2 túneles | Esperar 1 min; si sigue, `bash scripts/opn-apply.sh fw-b strongswan` (necesita el servidor de la nota ¹) |
+| OSPF A↔B con menos de 2 túneles / Site B inalcanzable desde A | El vigía de fw-b (cron cada minuto) relanza los túneles solo: esperar 1–2 min. Si sigue, `bash scripts/opn-apply.sh fw-b strongswan` (necesita el servidor de la nota ¹) |
 | Una sede con menos de 3 túneles | Esperar 2 min: el vigilante del kit relanza los túneles caídos cada 30 s (`/var/log/vigia-tuneles.log`). Si sigue: `docker exec GNS3.kit-sede-0N.<id> swanctl --load-all` |
 | Authelia no arrancada | Se reintenta sola; si no, reiniciar el nodo `authelia` |
 | Zabbix no responde | Comprobar que `zbx-db`, `zbx-server` y `zbx-web` están encendidos. Si sigue, `bash scripts/services-setup.sh` y reiniciar los 3 nodos |
@@ -76,8 +76,11 @@ cd ~/Documents/acc-project/Alcaldia-Digital/config/opnsense && python3 -m http.s
 
 ## 💾 Respaldos (automáticos)
 - Cada noche a las **02:00** se respaldan ts1, archivo, portal-db y dc1 en el NAS (no hay que hacer nada; si el PC está apagado a esa hora, ese día no hay copia y Zabbix avisa a las 26 h).
-- **Grabar una cinta:** encender el nodo `tape`, esperar ~1 min, ver `docker exec GNS3.tape.<id> cat /data/cartuchos/registro.log` y **apagarlo**.
-- **Respaldar configuraciones de red:** `bash scripts/backup-configs.sh` y después commit de `configs/`.
+- **Tareas programadas (automáticas):** el temporizador `acc-tareas.timer` (systemd de usuario, se instala una vez con `bash scripts/tareas-instalar.sh`) revisa cada hora y, con el lab encendido, ejecuta:
+  - el **respaldo de configuraciones de red** cada 24 h (`backup-configs.sh` + commit local de `configs/`, súbelo con push);
+  - la **cinta** cada 7 días (enciende `tape`, graba el cartucho y lo **apaga** solo).
+  - Si el lab estaba apagado, lo hace en la primera hora con el lab encendido. Registro: `~/.local/state/acc/tareas.log`; Zabbix alerta si una tarea falla o deja de ejecutarse.
+  - Forzar ahora (p. ej. en la defensa): `bash scripts/tareas.sh ahora configs` o `bash scripts/tareas.sh ahora cinta`.
 
 ## 💡 Consejos
 - **Pausa corta sin apagar el PC:** en *File → Edit project*, la opción «Leave this project running in the background when closing GNS3» permite cerrar solo la GUI con el laboratorio en marcha.
