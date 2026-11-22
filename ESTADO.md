@@ -18,7 +18,7 @@
 | F4 Servicios base | ✅ (docs/pruebas/F4-servicios-base.md) |
 | F5 Servicios críticos (+NAS, escritorios, horario, Cloudflare) | ✅ (docs/pruebas/F5-servicios-criticos.md) |
 | F6 Kits de sede | ⏳ siguiente |
-| F7 Publicación Cloudflare | 🔄 túneles/DNS hechos en F5; falta WARP y Access |
+| F7 Publicación Cloudflare | ✅ túneles, DNS, WARP, LAM solo vía WARP (falta: Access para monitor en F8) |
 | F8 Monitoreo (mínimo) | ⏳ |
 | F9 Respaldos | ⏳ |
 | F10 Pruebas | ⏳ |
@@ -88,8 +88,8 @@
 - Nuevo: `scripts/lab-check.sh` (chequeo de salud) y `docs/OPERACION.md` (apagar/encender). Envoltorios con reintento (authelia, nginx, cloudflared, portal, gate) para el arranque en frío.
 
 ## Pendientes que arrastra F5
-1. **WARP:** el token necesita el permiso *Zero Trust: Edit* y los correos autorizados para enrolar dispositivos → split tunnel sin 10.0.0.0/8, reglas de inscripción y política de red (ts1:3389). Rutas privadas y warp-routing ya activos.
-2. TOTP de extremo a extremo: lo valida el usuario en el navegador.
+1. ~~WARP~~ ✅ hecho (cf-zt-setup.sh) + gestión de identidades por LAM vía WARP (docs/pruebas/F5b-gestion-identidades.md).
+2. ~~TOTP de extremo a extremo~~ ✅ validado por el usuario.
 3. Respaldos restic (homes de ts1, archivo, volcados del portal) → nas-a → nas-b: **F9**.
 4. ts1 usa una imagen anterior (sin el arreglo de PID ni zenity de serie): están aplicados dentro del contenedor y en la imagen; si se recrea, hay que volver a unirlo (`net ads join`).
 
@@ -97,3 +97,7 @@
 
 ## Siguiente paso (F6)
 Kits de 3 sedes: kit-sede-0N (acc/kit-sede) en el CGNAT de su ISP (sede 1 y 3 → isp1 eth3/eth4; sede 2 → isp2 eth3) + switch integrado + 2 PC (una de ellas puede ser un pc-gui). Túneles IPsec salientes: 2 al Site A (VIP WAN1/WAN2) y 1 al Site B, OSPF con costes 10/20/100. Usuarios del AD por sede (`ad-setup.sh usuario …`). Pruebas: portal/archivo/RDP desde la sede, aislamiento sede↔sede, caída de túnel.
+
+## Gestión de identidades (hecho)
+- Altas, bajas y resets de funcionarios: **LAM** en `https://lam.evervc.dev` (solo con WARP + MFA + cuenta AD de `gestores-identidad`). Por terminal: `scripts/ad-setup.sh usuario <u> funcionarios "<Nombre>"` (luego moverlo a su OU de sede).
+- Certificado de lam.evervc.dev: Let's Encrypt, vence 19/02/2027 → renovar con `scripts/cert-lam.sh` + `scripts/lam-publish.sh`.
