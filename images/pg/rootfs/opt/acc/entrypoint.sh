@@ -13,6 +13,8 @@
   [ -z "${REPLICA_DE:-}" ] && exit 0
   until pg_isready -q -h 127.0.0.1; do sleep 3; done
   while true; do
+    # DR (P-A): con /etc/acc/DR-ACTIVO esta BD es la primaria y NO se pisa con copias del Site A
+    if [ -f /etc/acc/DR-ACTIVO ]; then sleep 60; continue; fi
     if PGPASSWORD="$POSTGRES_PASSWORD" pg_dump -h "$REPLICA_DE" -U "$POSTGRES_USER" -d "$POSTGRES_DB" -Fc -f /tmp/replica.dump 2>>/var/log/replica.log \
        && PGPASSWORD="$POSTGRES_PASSWORD" pg_restore -h 127.0.0.1 -U "$POSTGRES_USER" -d "$POSTGRES_DB" --clean --if-exists /tmp/replica.dump 2>>/var/log/replica.log; then
       date -Is > "${PGDATA:-/var/lib/postgresql/data}/replica_ok"; echo "$(date -Is) réplica OK desde $REPLICA_DE" >> /var/log/replica.log

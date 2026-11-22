@@ -81,7 +81,9 @@ def host(name, ip, grp, snmp=False, desc=""):
         if ip:
             p.update(interfaces=[iface], templates=templates)
         hid = api("host.create", p)["hostids"][0]
-    ifs = api("hostinterface.get", {"hostids": hid, "output": ["interfaceid"]})
+    ifs = api("hostinterface.get", {"hostids": hid, "output": ["interfaceid", "ip"]})
+    if ifs and ip and ifs[0]["ip"] != ip:   # la IP cambió (p. ej. GUI de los FW solo en ADMIN desde T5)
+        api("hostinterface.update", {"interfaceid": ifs[0]["interfaceid"], "ip": ip})
     return hid, (ifs[0]["interfaceid"] if ifs else None)
 
 
@@ -128,8 +130,8 @@ def servicios(name, ip, grp, checks, desc="", snmp=False):
 
 # ---------- Site A ----------
 A = "Site A"
-servicios("fw-a1", "10.10.20.2", A, [("GUI OPNsense", "https", 443)], "OPNsense 26.7 (CARP maestro). Equivale al firewall de borde del Site A.")
-servicios("fw-a2", "10.10.20.3", A, [("GUI OPNsense", "https", 443)], "OPNsense 26.7 (CARP respaldo).")
+servicios("fw-a1", "10.10.40.2", A, [("GUI OPNsense", "https", 443)], "OPNsense 26.7 (CARP maestro; supervisado por su IP de ADMIN, única con GUI/SSH). Equivale al firewall de borde del Site A.")
+servicios("fw-a2", "10.10.40.3", A, [("GUI OPNsense", "https", 443)], "OPNsense 26.7 (CARP respaldo).")
 servicios("vip-carp-a", "10.10.20.1", A, [], "Gateway virtual CARP de la VLAN SERVIDORES (lo atiende el FW maestro).")
 for n, ip in (("sw-a1", "10.10.10.11"), ("sw-a2", "10.10.10.12")):
     servicios(n, ip, A, [], "Switch de acceso Open vSwitch (camino de energía " + ("A)" if n.endswith("1") else "B)"))
@@ -163,7 +165,7 @@ nas("nas-a", "10.10.60.10", A)
 
 # ---------- Site B ----------
 B = "Site B"
-servicios("fw-b", "10.20.20.1", B, [("GUI OPNsense", "https", 443)], "OPNsense del Site B (Tier I, DR en caliente).")
+servicios("fw-b", "10.20.40.1", B, [("GUI OPNsense", "https", 443)], "OPNsense del Site B (Tier I, DR en caliente).")
 for n, ip in (("sw-b1", "10.20.10.11"), ("sw-b2", "10.20.10.12")):
     servicios(n, ip, B, [], "Switch Open vSwitch del Site B.")
 servicios("dc2", "10.20.20.10", B, [("DNS", "tcp", 53), ("Kerberos", "tcp", 88), ("LDAP", "ldap", 389)], "Samba AD DC secundario.")

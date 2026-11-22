@@ -2,7 +2,7 @@
 
 | Campo | Valor |
 |---|---|
-| Fase actual | **F9 ✅ terminada** → siguiente: **F10 Pruebas formales** (T1–T13, DR completo del Site A, hacking) |
+| Fase actual | **F10 ✅ terminada** — MVP completo (F0–F10). Opcional: puesto Windows (defensa), Suricata, GLPI |
 | Última actualización | 2026-11-21 ~12:10 (hora local) |
 | Plazo | 48 h → 2026-11-23 |
 | Proyectos GNS3 abiertos | `ACC-Lab` (id 88f8f32e-4b4f-4e25-9a8b-ac0c9c71c5f9) |
@@ -21,7 +21,7 @@
 | F7 Publicación Cloudflare | ✅ túneles, DNS, WARP, LAM solo vía WARP (falta: Access para monitor en F8) |
 | F8 Monitoreo (mínimo) | ✅ (docs/pruebas/F8-monitoreo.md) |
 | F9 Respaldos | ✅ (docs/pruebas/F9-respaldos.md) |
-| F10 Pruebas | ⏳ |
+| F10 Pruebas formales | ✅ (docs/pruebas/F10-pruebas-formales.md) |
 
 ## Hecho en F0
 - Repo con estructura, AGENTS.md, IPAM (`inventory/ipam.md`) y topología (`topology/topologia.md`).
@@ -144,5 +144,16 @@ restic: homes de ts1, archivo y dumps del portal → nas-a (bucket con Object Lo
 - `pkill -f` dentro de `sh -c`: usar el truco `[r]espaldo.sh` para no matarse a sí mismo.
 - Los alias `mc` de los NAS no persisten (contenedor recreado): `nas-setup.sh` los vuelve a crear.
 
-## Siguiente paso (F10)
+## (anterior) Siguiente paso (F10)
 Pruebas formales T1–T13 con evidencias: failover Tier II (ya medido, re-documentar), **T8 DR completo del Site A** (dr-dns-switch.sh B, arrancar portal-b/authelia-b/gate-b/archivo-b, restaurar archivo desde nas-b, medir RTO), T5 hacking (nmap, hydra contra Authelia/SSH, aislamiento lateral), energía (camino A/B).
+
+## Hecho en F10 (ver docs/pruebas/F10-pruebas-formales.md y docs/PROCEDIMIENTOS-DR.md)
+- T1–T8 ejecutadas con sonda de extremo a extremo (`f10-sonda.sh`); T9 documentada. Scripts: `test-zones.sh`, `dr-activar-b.sh`, `dr-retorno-a.sh`.
+- Correcciones nacidas de las pruebas: SSH solo clave + SSH/GUI solo GESTION/ADMIN; kits descartan gestión/ADMIN/DMZ/RESPALDO/IP de FW; cloudflared QUIC; DPD 5 s en kits; anuncio de MAC de gestión en switches; Zabbix vigila los FW por su IP de ADMIN.
+
+## Errores conocidos / gotchas (F10)
+- **pf no evalúa** el tráfico que llega por una VTI con destino al propio firewall (ni con regla explícita): la protección está en el kit de la sede (nft) y en SSH/GUI restringidos.
+- SSH a los firewalls: **solo con clave** (`fw.sh` desde adm-pc / adm-pc-b). GUI solo desde GESTION/ADMIN (`https://10.10.40.2`, `.3`, `10.20.40.1`).
+- Al conmutar DNS (DR) Cloudflare tarda 1–2 min en propagar: respuestas mixtas durante ese tiempo.
+- Durante un DR, `portal-db-b` tiene `/etc/acc/DR-ACTIVO`: no se pisa con la réplica. El retorno la retira; reiniciar el nodo.
+- Para pruebas con `ip link set ethX down` en los ISP basta `ip link set ethX up` (rutas conectadas); en los kits hay que restaurar la ruta por defecto.
