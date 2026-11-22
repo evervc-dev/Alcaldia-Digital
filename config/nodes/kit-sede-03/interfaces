@@ -1,0 +1,33 @@
+# kit-sede-03: WAN detrás del CGNAT del ISP (100.64.3.2/30) + LAN 10.100.3.0/24 + 3 túneles XFRM (route-based)
+auto eth0
+iface eth0 inet static
+	address 100.64.3.2
+	netmask 255.255.255.252
+	gateway 100.64.3.1
+	up printf 'nameserver 1.1.1.1\nnameserver 8.8.8.8\n' > /etc/resolv.conf
+auto eth1
+iface eth1 inet static
+	address 10.100.3.1
+	netmask 255.255.255.0
+	up /sbin/ip route add blackhole 10.0.0.0/8 metric 250 2>/dev/null || true   # sin túnel, la red del CD NUNCA sale por Internet
+# vti-a1: Site A por WAN1 (coste 10)
+auto vti-a1
+iface vti-a1 inet static
+	pre-up /sbin/ip link add vti-a1 type xfrm dev eth0 if_id 1 2>/dev/null || true
+	pre-up /sbin/ip link set vti-a1 mtu 1400   # igual que la VTI de OPNsense (si no, OSPF queda en ExStart)
+	address 172.16.3.2
+	netmask 255.255.255.252
+# vti-a2: Site A por WAN2 (coste 20)
+auto vti-a2
+iface vti-a2 inet static
+	pre-up /sbin/ip link add vti-a2 type xfrm dev eth0 if_id 2 2>/dev/null || true
+	pre-up /sbin/ip link set vti-a2 mtu 1400   # igual que la VTI de OPNsense (si no, OSPF queda en ExStart)
+	address 172.16.3.6
+	netmask 255.255.255.252
+# vti-b: Site B (coste 100)
+auto vti-b
+iface vti-b inet static
+	pre-up /sbin/ip link add vti-b type xfrm dev eth0 if_id 3 2>/dev/null || true
+	pre-up /sbin/ip link set vti-b mtu 1400   # igual que la VTI de OPNsense (si no, OSPF queda en ExStart)
+	address 172.16.3.10
+	netmask 255.255.255.252

@@ -1,0 +1,3 @@
+# pc-01-a: PC de funcionario de la sede 01 (DHCP del kit)
+auto eth0
+iface eth0 inet dhcp

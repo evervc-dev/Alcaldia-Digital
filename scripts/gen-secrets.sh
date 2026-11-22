@@ -16,3 +16,4 @@ fill SVC_LDAP_PASS "Svc-$(rnd 16)-7k"            # cuenta de servicio LDAP (solo
 fill LAB_USER_PASS "Demo-$(rnd 10)-4q"            # contraseña común de los usuarios de demostración
 fill MINIO_ROOT_PASS "$(rnd 28)"
 fill LAM_MASTER_PASS "$(rnd 24)"           # contraseña maestra de configuración de LAM
+fill IPSEC_PSK_SEDES "$(rnd 40)"            # PSK de los túneles de las sedes

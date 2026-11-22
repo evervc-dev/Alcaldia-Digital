@@ -99,3 +99,11 @@ Todo bloqueo queda registrado (log en OPNsense → syslog → Zabbix). Suricata 
 | nginx-dmz / cloudflared | 10.10.30.10 / .11 | 10.20.30.10 / .11 |
 | nas | 10.10.60.10 | 10.20.60.10 |
 | pc-gui | VLAN 50 DHCP (.100–.199) | — |
+
+### Sedes (F6)
+| Sede | WAN kit | IP pública (pool CGNAT) | LAN / GW | Túneles (A-WAN1 / A-WAN2 / B) |
+|---|---|---|---|---|
+| 1 | 100.64.1.2/30 (isp1 eth3) | 203.0.113.251 | 10.100.1.0/24 · .1 | 172.16.1.0/30 · .4/30 · .8/30 |
+| 2 | 100.64.2.2/30 (isp2 eth3) | 198.51.100.252 | 10.100.2.0/24 · .1 | 172.16.2.0/30 · .4/30 · .8/30 |
+| 3 | 100.64.3.2/30 (isp1 eth4) | 203.0.113.253 | 10.100.3.0/24 · .1 | 172.16.3.0/30 · .4/30 · .8/30 |
+| lam (gestión identidades) | — | — | 10.10.20.50 (VLAN 20) | solo vía WARP |

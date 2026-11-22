@@ -2,7 +2,7 @@
 
 | Campo | Valor |
 |---|---|
-| Fase actual | **F5 ✅ terminada** (pendientes menores abajo) → siguiente: **F6 Kits de sede ×3** |
+| Fase actual | **F6 ✅ terminada** → siguiente: **F8 Monitoreo (Zabbix + alertas)** y **F9 Respaldos** |
 | Última actualización | 2026-11-21 ~12:10 (hora local) |
 | Plazo | 48 h → 2026-11-23 |
 | Proyectos GNS3 abiertos | `ACC-Lab` (id 88f8f32e-4b4f-4e25-9a8b-ac0c9c71c5f9) |
@@ -17,9 +17,9 @@
 | F3 Red Site B + WAN | ✅ (docs/pruebas/F3-site-b-wan.md) |
 | F4 Servicios base | ✅ (docs/pruebas/F4-servicios-base.md) |
 | F5 Servicios críticos (+NAS, escritorios, horario, Cloudflare) | ✅ (docs/pruebas/F5-servicios-criticos.md) |
-| F6 Kits de sede | ⏳ siguiente |
+| F6 Kits de sede | ✅ (docs/pruebas/F6-sedes.md) |
 | F7 Publicación Cloudflare | ✅ túneles, DNS, WARP, LAM solo vía WARP (falta: Access para monitor en F8) |
-| F8 Monitoreo (mínimo) | ⏳ |
+| F8 Monitoreo (mínimo) | ⏳ siguiente |
 | F9 Respaldos | ⏳ |
 | F10 Pruebas | ⏳ |
 
@@ -95,9 +95,16 @@
 
 **Puertos de sw-a1/sw-a2:** eth8 y eth10 tienen enlaces fantasma (no usar). Libres: eth0, eth2, eth21–eth23 (y eth5/eth18 en sw-a2). sw-b1 libres: eth0, eth2, eth13, eth14.
 
-## Siguiente paso (F6)
+## Hecho en F6
+- 3 sedes con kit replicable (`new-sede.sh N` → `sede-setup.sh N`), túneles A-WAN1/A-WAN2/B con OSPF, pool CGNAT por sede, hub-and-spoke probado y failover sede→A-WAN2→B. `lab-check.sh` incluye las sedes.
+- Para añadir una sede N: `new-sede.sh N`, añadir su IP pública a `SEDES_PUB` (wan-ab.inc.php) y al snat del ISP, `opn-apply.sh` en los 3 FW, `ad-ou-delegacion.sh N`, crear nodos y `sede-setup.sh N`.
+
+## (anterior) Siguiente paso (F6)
 Kits de 3 sedes: kit-sede-0N (acc/kit-sede) en el CGNAT de su ISP (sede 1 y 3 → isp1 eth3/eth4; sede 2 → isp2 eth3) + switch integrado + 2 PC (una de ellas puede ser un pc-gui). Túneles IPsec salientes: 2 al Site A (VIP WAN1/WAN2) y 1 al Site B, OSPF con costes 10/20/100. Usuarios del AD por sede (`ad-setup.sh usuario …`). Pruebas: portal/archivo/RDP desde la sede, aislamiento sede↔sede, caída de túnel.
 
 ## Gestión de identidades (hecho)
 - Altas, bajas y resets de funcionarios: **LAM** en `https://lam.evervc.dev` (solo con WARP + MFA + cuenta AD de `gestores-identidad`). Por terminal: `scripts/ad-setup.sh usuario <u> funcionarios "<Nombre>"` (luego moverlo a su OU de sede).
 - Certificado de lam.evervc.dev: Let's Encrypt, vence 19/02/2027 → renovar con `scripts/cert-lam.sh` + `scripts/lam-publish.sh`.
+
+## Siguiente paso (F8)
+Zabbix: zbx-db (acc/pg), zbx-server y zbx-web (oficiales) en SERVIDORES A; agentes/SNMP en FW (os-net-snmp), switches, kits y servicios; mapa de red A/B/sedes; disparadores de la Tabla 13 aplicables (enlace/túnel caído, servicio caído, NAS > 80 %, réplica atrasada > RPO); alertas por correo a mailpit; `monitor.evervc.dev` protegido con Cloudflare Access (o solo por WARP).

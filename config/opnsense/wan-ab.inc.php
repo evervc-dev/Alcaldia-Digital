@@ -16,6 +16,26 @@ const WAN_AB_TUNNELS = [
     [2, 'opt9', 'VTI_ISP2', '198.51.100.4', '198.51.100.10', '172.16.0.5', '172.16.0.6', 20],
 ];
 
+/*
+ * Sedes distritales (hub-and-spoke, F6): cada kit INICIA 3 túneles desde detrás del CGNAT de su ISP (NAT-T):
+ *   A por WAN1 (coste 10), A por WAN2 (coste 20) y B (coste 100). Identidad del kit: FQDN kit-sede-0N.alcaldia.lab.
+ *   Interior: A-WAN1 172.16.N.1/.2 · A-WAN2 172.16.N.5/.6 · B 172.16.N.9/.10.  PSK de sedes: /root/ipsec-sedes.psk.
+ */
+const SEDES_PUB = [1 => '203.0.113.251', 2 => '198.51.100.252', 3 => '203.0.113.253'];  // IP del pool CGNAT de cada sede
+function sede_tunnels($side) {
+    $t = [];  // reqid, ifname, descr, local_outer, sede_pub, sede_fqdn, inner_local, inner_sede, cost, wanif
+    foreach (SEDES_PUB as $n => $pub) {
+        $fq = sprintf('kit-sede-%02d.alcaldia.lab', $n); $s2 = sprintf('%02d', $n);
+        if ($side === 'a') {
+            $t[] = [10 + $n, 'opt' . (8 + 2 * $n), "SEDE{$s2}_WAN1", '203.0.113.4', $pub, $fq, "172.16.$n.1", "172.16.$n.2", 10, 'wan'];
+            $t[] = [20 + $n, 'opt' . (9 + 2 * $n), "SEDE{$s2}_WAN2", '198.51.100.4', $pub, $fq, "172.16.$n.5", "172.16.$n.6", 20, 'opt1'];
+        } else {
+            $t[] = [30 + $n, 'opt' . (9 + $n), "SEDE{$s2}", '203.0.113.10', $pub, $fq, "172.16.$n.9", "172.16.$n.10", 100, 'wan'];
+        }
+    }
+    return $t;
+}
+
 /* Asignación de las interfaces VTI (sin IP: la pone el VTI) */
 function wan_ab_interfaces($ifs) {
     foreach (WAN_AB_TUNNELS as [$reqid, $ifn, $descr]) {
@@ -23,6 +43,11 @@ function wan_ab_interfaces($ifs) {
         $n->addChild('if', "ipsec$reqid");
         $n->addChild('descr', $descr);
         $n->addChild('enable', '1');
+    }
+}
+function sede_interfaces($ifs, $side) {
+    foreach (sede_tunnels($side) as [$reqid, $ifn, $descr]) {
+        $n = $ifs->addChild($ifn); $n->addChild('if', "ipsec$reqid"); $n->addChild('descr', $descr); $n->addChild('enable', '1');
     }
 }
 
@@ -39,6 +64,17 @@ function wan_ab_rules($rule, $side) {
         $rule($ifn, 'pass', "$descr: tráfico entre sitios y OSPF", ['log' => '0']);
     }
     // (el filtrado en enc0 se desactiva con tunables en wan_ab_apply: se filtra solo en las VTI)
+    // --- Sedes: solo DNS (dc1/dc2), RDP (ts1) y ping a los servidores; TODO lo demás (incl. sede<->sede) bloqueado y registrado
+    foreach (sede_tunnels($side) as [$reqid, $ifn, $descr, $lo, $pub, , , , , $wanif]) {
+        $rule($wanif, 'pass', "$descr: IKE/NAT-T desde la sede", ['protocol' => 'UDP', 'source_net' => "$pub/32", 'destination_port' => 'PUERTOS_IKE', 'log' => '0']);
+        $rule($wanif, 'pass', "$descr: ESP desde la sede", ['protocol' => 'ESP', 'source_net' => "$pub/32", 'log' => '0']);
+        $rule($ifn, 'pass', "$descr: OSPF", ['protocol' => 'OSPF', 'log' => '0']);
+        foreach (['10.10.20.0/24', '10.20.20.0/24'] as $net) {
+            $rule($ifn, 'pass', "$descr: DNS/RDP a servidores $net", ['protocol' => 'TCP/UDP', 'destination_net' => $net, 'destination_port' => 'PUERTOS_SEDE', 'log' => '0']);
+            $rule($ifn, 'pass', "$descr: ping a servidores $net", ['protocol' => 'ICMP', 'destination_net' => $net, 'log' => '0']);
+        }
+        $rule($ifn, 'block', "$descr: resto bloqueado (hub-and-spoke)");
+    }
 }
 
 /* IPsec + OSPF.  $side = 'a' | 'b';  $routerid = IP única por firewall;  $passive = interfaces LAN */
@@ -80,6 +116,20 @@ function wan_ab_apply($side, $routerid, $passive) {
     save_model($tun, 'tunables');
     Config::getInstance()->save();
 
+    /* --- PSK de las sedes --- */
+    $psk_s = trim(@file_get_contents('/root/ipsec-sedes.psk')); @unlink('/root/ipsec-sedes.psk');
+    $ipsec = new \OPNsense\IPsec\IPsec();
+    if (strlen($psk_s) < 20) {   // conservar la existente al re-ejecutar
+        foreach ($ipsec->preSharedKeys->preSharedKey->iterateItems() as $k) { if (str_contains((string)$k->remote_ident, 'kit-sede')) { $psk_s = (string)$k->Key; break; } }
+    }
+    if (strlen($psk_s) >= 20) {
+        foreach (sede_tunnels($side) as [$reqid, $ifn, $descr, $lo, , $fq]) {
+            $ipsec->preSharedKeys->preSharedKey->Add()->setNodes(['ident' => $lo, 'remote_ident' => $fq,
+                'keyType' => 'PSK', 'Key' => $psk_s, 'description' => "$descr"]);
+        }
+        save_model($ipsec, 'ipsec-psk-sedes'); Config::getInstance()->save();
+    } else { fwrite(STDERR, "aviso: sin /root/ipsec-sedes.psk, túneles de sedes sin PSK\n"); }
+
     /* --- swanctl: conexiones, locals, remotes, children, VTI --- */
     $sw = new \OPNsense\IPsec\Swanctl();
     foreach (['Connections' => 'Connection', 'locals' => 'local', 'remotes' => 'remote',
@@ -102,6 +152,20 @@ function wan_ab_apply($side, $routerid, $passive) {
             'local_ts' => '0.0.0.0/0', 'remote_ts' => '0.0.0.0/0', 'description' => "$descr child"]);
         $sw->VTIs->VTI->Add()->setNodes(['enabled' => '1', 'reqid' => (string)$reqid, 'local' => $me,
             'remote' => $peer, 'tunnel_local' => $in_me, 'tunnel_remote' => $in_peer, 'description' => $descr]);
+    }
+    foreach (sede_tunnels($side) as [$reqid, $ifn, $descr, $lo, $pub, $fq, $il, $is]) {   // sedes: solo RESPONDEMOS
+        $conn = $sw->Connections->Connection->Add();
+        $conn->setNodes(['enabled' => '1', 'proposals' => 'default', 'version' => '2', 'unique' => 'replace', 'mobike' => '0',
+            'local_addrs' => $lo, 'remote_addrs' => $pub, 'encap' => '1', 'dpd_delay' => '10', 'dpd_timeout' => '30',
+            'keyingtries' => '0', 'description' => "$descr"]);
+        $cu = $conn->getAttributes()['uuid'];
+        $sw->locals->local->Add()->setNodes(['enabled' => '1', 'connection' => $cu, 'round' => '0', 'auth' => 'psk', 'id' => $lo, 'description' => "$descr local"]);
+        $sw->remotes->remote->Add()->setNodes(['enabled' => '1', 'connection' => $cu, 'round' => '0', 'auth' => 'psk', 'id' => $fq, 'description' => "$descr sede"]);
+        $sw->children->child->Add()->setNodes(['enabled' => '1', 'connection' => $cu, 'reqid' => (string)$reqid,
+            'esp_proposals' => 'default', 'mode' => 'tunnel', 'policies' => '0', 'start_action' => 'none',
+            'dpd_action' => 'clear', 'close_action' => 'none', 'local_ts' => '0.0.0.0/0', 'remote_ts' => '0.0.0.0/0', 'description' => "$descr child"]);
+        $sw->VTIs->VTI->Add()->setNodes(['enabled' => '1', 'reqid' => (string)$reqid, 'local' => $lo, 'remote' => $pub,
+            'tunnel_local' => $il, 'tunnel_remote' => $is, 'description' => $descr]);
     }
     save_model($sw, 'swanctl');
     Config::getInstance()->save();
@@ -139,9 +203,13 @@ function wan_ab_apply($side, $routerid, $passive) {
         $addif(['enabled' => '1', 'interfacename' => $ifn, 'area' => $au, 'cost' => (string)$cost,
             'networktype' => 'point-to-point', 'hellointerval' => '2', 'deadinterval' => '8']);
     }
+    foreach (sede_tunnels($side) as [$reqid, $ifn, , , , , , , $cost]) {
+        $addif(['enabled' => '1', 'interfacename' => $ifn, 'area' => $au, 'cost' => (string)$cost,
+            'networktype' => 'point-to-point', 'hellointerval' => '2', 'deadinterval' => '8']);
+    }
     foreach ($passive as $ifn) {
         $addif(['enabled' => '1', 'interfacename' => $ifn, 'area' => $au, 'passive' => '1']);
     }
     Config::getInstance()->save();
-    echo "ok: ospf-interfaces (" . (count(WAN_AB_TUNNELS) + count($passive)) . ")\n";
+    echo "ok: ospf-interfaces (" . (count(WAN_AB_TUNNELS) + count(sede_tunnels($side)) + count($passive)) . ")\n";
 }

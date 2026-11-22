@@ -62,6 +62,7 @@ foreach ($VLANS as $tag => [$ifn, $descr]) {
 }
 $add_if('opt7', 'vtnet3', 'PFSYNC', $my99, '29');
 wan_ab_interfaces($ifs);
+sede_interfaces($ifs, 'a');
 
 /* ---------- helpers de modelos ---------- */
 function reset_array($field) { foreach ($field->iterateItems() as $uuid => $item) { $field->del($uuid); } }
@@ -122,7 +123,7 @@ Config::getInstance()->save();
 
 /* ---------- Alias de puertos (las reglas no aceptan listas) ---------- */
 $al = new \OPNsense\Firewall\Alias();
-$want = ['PUERTOS_PUBLICADOS' => "80\n443\n8000\n8080\n9091\n9200", 'PUERTOS_WEB_DNS' => "53\n80\n443", 'PUERTOS_IKE' => "500\n4500", 'PUERTOS_AD' => "53\n88\n389\n636", 'PUERTOS_RDP' => "3389"];
+$want = ['PUERTOS_PUBLICADOS' => "80\n443\n8000\n8080\n9091\n9200", 'PUERTOS_WEB_DNS' => "53\n80\n443", 'PUERTOS_IKE' => "500\n4500", 'PUERTOS_AD' => "53\n88\n389\n636", 'PUERTOS_RDP' => "3389", 'PUERTOS_SEDE' => "53\n3389"];
 foreach ($al->aliases->alias->iterateItems() as $uuid => $a) {
     if (isset($want[(string)$a->name])) { $al->aliases->alias->del($uuid); }
 }

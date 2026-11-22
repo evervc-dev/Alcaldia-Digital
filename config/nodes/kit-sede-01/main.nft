@@ -1,0 +1,14 @@
+# kit-sede-01: Internet sale por el ISP local (NAT); la red del centro de datos (10/8) va por los túneles sin NAT
+flush ruleset
+table ip nat {
+  chain postrouting {
+    type nat hook postrouting priority 100;
+    oifname "eth0" ip daddr != 10.0.0.0/8 masquerade
+  }
+}
+table ip filter {
+  chain forward {
+    type filter hook forward priority 0; policy accept;
+    tcp flags syn tcp option maxseg size set rt mtu    # MSS ajustado a la MTU de los túneles
+  }
+}

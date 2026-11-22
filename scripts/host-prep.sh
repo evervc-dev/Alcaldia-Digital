@@ -1,7 +1,7 @@
 #!/bin/bash
 # Prepara el host Arch (ejecutar con sudo): carga los módulos que usan los nodos y los deja persistentes.
 set -euo pipefail
-MODS="bonding openvswitch 8021q"
+MODS="bonding openvswitch 8021q xfrm_interface"
 for m in $MODS; do modprobe "$m" && echo "módulo $m cargado"; done
 printf '%s\n' $MODS > /etc/modules-load.d/acc-gns3.conf
 echo "Persistente en /etc/modules-load.d/acc-gns3.conf"

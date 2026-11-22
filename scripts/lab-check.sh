@@ -8,7 +8,7 @@ echo "== Host"
 chk "virbr0 (NAT libvirt) arriba" "ip -4 addr show virbr0 | grep -q 192.168.122.1"
 chk "módulos bonding/openvswitch/8021q" "lsmod | grep -q '^bonding' && lsmod | grep -q '^openvswitch' && lsmod | grep -q '^8021q'"
 echo "== Contenedores GNS3"
-N=$(docker ps --format '{{.Names}}' | grep -c "\.$P$"); [ "$N" -ge 30 ] && ok "$N contenedores en marcha (4 de B en espera, detenidos a propósito)" || ko "solo $N contenedores en marcha (esperado ≥30)"
+N=$(docker ps --format '{{.Names}}' | grep -c "\.$P$"); [ "$N" -ge 42 ] && ok "$N contenedores en marcha (4 de B en espera, detenidos a propósito)" || ko "solo $N contenedores en marcha (esperado ≥42)"
 echo "== Red / WAN"
 chk "Internet desde Site A (adm-pc → 1.1.1.1)" "docker exec GNS3.adm-pc.$P ping -c2 -W2 1.1.1.1"
 chk "Internet desde Site B (adm-pc-b → 1.1.1.1)" "docker exec GNS3.adm-pc-b.$P ping -c2 -W2 1.1.1.1"
@@ -24,4 +24,9 @@ chk "Authelia arrancada" "docker exec GNS3.authelia.$P grep -q 'Startup complete
 chk "ts1: xrdp escuchando :3389" "docker exec GNS3.cloudflared-a.$P nc -z -w3 10.10.20.40 3389"
 chk "NAS A/B vivos" "docker exec GNS3.nas-a.$P curl -sf http://127.0.0.1:9000/minio/health/live && docker exec GNS3.nas-a.$P curl -sf http://10.20.60.10:9000/minio/health/live"
 chk "Réplica del portal en B (< 2 h)" "docker exec GNS3.portal-db-b.$P sh -c 'f=/var/lib/postgresql/data/pgdata/replica_ok; [ \$(( \$(date +%s) - \$(date -d \$(cat \$f) +%s 2>/dev/null || stat -c %Y \$f) )) -lt 7200 ]'"
+echo "== Sedes"
+for n in 01 02 03; do
+  T=$(docker exec GNS3.kit-sede-$n.$P sh -c 'swanctl --list-sas 2>/dev/null | grep -c ESTABLISHED' 2>/dev/null); O=$(docker exec GNS3.kit-sede-$n.$P sh -c 'vtysh -c "show ip ospf neighbor" | grep -c Full' 2>/dev/null)
+  [ "$T" = 3 ] && [ "$O" = 3 ] && ok "kit-sede-$n: 3 túneles y 3 OSPF Full" || ko "kit-sede-$n: túneles=$T OSPF=$O (esperado 3/3)"
+done
 echo; [ $FAIL = 0 ] && echo "RESULTADO: todo OK" || echo "RESULTADO: $FAIL comprobación(es) fallida(s) — ver ESTADO.md (gotchas)"
