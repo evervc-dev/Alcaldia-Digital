@@ -122,5 +122,27 @@ dhcp-option=option:dns-server,10.10.20.10,10.20.20.10
 dhcp-option=option:domain-search,ad.alcaldia.lab
 dhcp-authoritative
 EOF4
+# SNMP de solo lectura para Zabbix (F8): la comunidad va en acc-community.conf (desde .env, lo instala sede-setup.sh)
+cat > $K/snmpd.conf <<EOF5
+# acc: SNMP del kit de la sede $NN; solo lectura y solo desde zbx-server (10.10.20.30)
+agentaddress udp:161
+includeFile /etc/snmp/acc-community.conf
+sysLocation Sede $NN (kit-sede-$NN)
+sysContact mesa@alcaldia.lab
+# estado de cada túnel IPsec (1 = ESTABLISHED) y vecinos OSPF en Full
+extend tunel-a-wan1 /etc/snmp/acc-estado.sh tunel a-wan1
+extend tunel-a-wan2 /etc/snmp/acc-estado.sh tunel a-wan2
+extend tunel-b /etc/snmp/acc-estado.sh tunel b
+extend ospf-full /etc/snmp/acc-estado.sh ospf
+EOF5
+mkdir -p $K/files/etc/snmp
+cat > $K/files/etc/snmp/acc-estado.sh <<'EOF6'
+#!/bin/sh
+# Métricas del kit para SNMP extend (Zabbix): tunel <nombre> -> 1/0 ; ospf -> nº de vecinos Full
+case "$1" in
+  tunel) swanctl --list-sas --ike "$2" 2>/dev/null | grep -q ESTABLISHED && echo 1 || echo 0 ;;
+  ospf)  vtysh -c 'show ip ospf neighbor' 2>/dev/null | grep -c Full ;;
+esac
+EOF6
 for p in a b; do mkdir -p config/nodes/pc-$NN-$p; printf '# pc-%s-%s: PC de funcionario de la sede %s (DHCP del kit)\nauto eth0\niface eth0 inet dhcp\n' $NN $p $NN > config/nodes/pc-$NN-$p/interfaces; done
 echo "kit-sede-$NN generado en $K (+ pc-$NN-a, pc-$NN-b)"

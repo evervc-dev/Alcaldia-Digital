@@ -18,6 +18,7 @@ MINIO_IDENTITY_LDAP_USER_DN_SEARCH_BASE_DN='CN=Users,$BASE'
 MINIO_IDENTITY_LDAP_USER_DN_SEARCH_FILTER='(sAMAccountName=%s)'
 MINIO_IDENTITY_LDAP_GROUP_SEARCH_BASE_DN='$BASE'
 MINIO_IDENTITY_LDAP_GROUP_SEARCH_FILTER='(&(objectclass=group)(member=%d))'
+MINIO_PROMETHEUS_AUTH_TYPE='public'   # métricas de capacidad para Zabbix (solo lectura, sin datos)
 EOV
     echo "$1: nas.env escrito (LDAP -> $2)"; done
   exit 0

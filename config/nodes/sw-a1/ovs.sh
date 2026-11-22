@@ -24,8 +24,11 @@ ovs-vsctl set port eth16 tag=20   # archivo
 ovs-vsctl set port eth17 tag=20   # mailpit
 ovs-vsctl set port eth18 tag=50   # pc-gui (USUARIOS)
 ovs-vsctl set port eth21 tag=20        # lam (gestión de identidades)
+ovs-vsctl set port eth22 tag=20   # zbx-db (monitoreo)
+ovs-vsctl set port eth23 tag=20   # zbx-server (monitoreo)
+ovs-vsctl set port eth2 tag=20    # zbx-web (monitoreo)
 # Puertos libres -> VLAN de aparcamiento 999 (sin gateway)
-for p in eth0 eth2 eth10 eth8 eth22 eth23; do
+for p in eth0 eth10 eth8; do
   ovs-vsctl --if-exists set port $p tag=999
 done
 # Interfaz de gestión en VLAN 10

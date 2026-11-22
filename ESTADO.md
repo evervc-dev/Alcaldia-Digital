@@ -2,7 +2,7 @@
 
 | Campo | Valor |
 |---|---|
-| Fase actual | **F6 ✅ terminada** → siguiente: **F8 Monitoreo (Zabbix + alertas)** y **F9 Respaldos** |
+| Fase actual | **F8 ✅ terminada** → siguiente: **F9 Respaldos** (restic + backup-configs) y **F10 Pruebas formales** |
 | Última actualización | 2026-11-21 ~12:10 (hora local) |
 | Plazo | 48 h → 2026-11-23 |
 | Proyectos GNS3 abiertos | `ACC-Lab` (id 88f8f32e-4b4f-4e25-9a8b-ac0c9c71c5f9) |
@@ -19,7 +19,7 @@
 | F5 Servicios críticos (+NAS, escritorios, horario, Cloudflare) | ✅ (docs/pruebas/F5-servicios-criticos.md) |
 | F6 Kits de sede | ✅ (docs/pruebas/F6-sedes.md) |
 | F7 Publicación Cloudflare | ✅ túneles, DNS, WARP, LAM solo vía WARP (falta: Access para monitor en F8) |
-| F8 Monitoreo (mínimo) | ⏳ siguiente |
+| F8 Monitoreo (mínimo) | ✅ (docs/pruebas/F8-monitoreo.md) |
 | F9 Respaldos | ⏳ |
 | F10 Pruebas | ⏳ |
 
@@ -107,5 +107,20 @@ Kits de 3 sedes: kit-sede-0N (acc/kit-sede) en el CGNAT de su ISP (sede 1 y 3 �
 - Altas, bajas y resets de funcionarios: **LAM** en `https://lam.evervc.dev` (solo con WARP + MFA + cuenta AD de `gestores-identidad`). Por terminal: `scripts/ad-setup.sh usuario <u> funcionarios "<Nombre>"` (luego moverlo a su OU de sede).
 - Certificado de lam.evervc.dev: Let's Encrypt, vence 19/02/2027 → renovar con `scripts/cert-lam.sh` + `scripts/lam-publish.sh`.
 
-## Siguiente paso (F8)
+## (anterior) Siguiente paso (F8)
 Zabbix: zbx-db (acc/pg), zbx-server y zbx-web (oficiales) en SERVIDORES A; agentes/SNMP en FW (os-net-snmp), switches, kits y servicios; mapa de red A/B/sedes; disparadores de la Tabla 13 aplicables (enlace/túnel caído, servicio caído, NAS > 80 %, réplica atrasada > RPO); alertas por correo a mailpit; `monitor.evervc.dev` protegido con Cloudflare Access (o solo por WARP).
+
+## Hecho en F8 (ver docs/pruebas/F8-monitoreo.md)
+- zbx-db/zbx-server/zbx-web (10.10.20.34/.30/.33) en SERVIDORES A con doble enlace (sw-a1/sw-a2 eth22, eth23, eth2). Configuración por API: `scripts/zbx-setup.sh` (idempotente; re-ejecutar tras cambios).
+- 35 hosts, servicios, túneles (desde el CD + SNMP de los kits), réplica (ODBC), NAS (%), portal público; alertas a mailpit; mapa «Alcaldía Digital».
+- `monitor.evervc.dev`: Cloudflare Access (WARP_EMAILS, PIN) + login Zabbix. `cf-zt-setup.sh` paso 6 y `cf-setup.sh` (HOSTS incluye monitor).
+- Puesto unido al dominio `puesto-01` (Sede 1) y `PUERTOS_AD_CLIENTE` (ver F6).
+
+## Errores conocidos / gotchas (F8)
+- Al reabrir el proyecto: zbx.env/pg.env están en volúmenes; si Zabbix no arranca, `services-setup.sh` y reiniciar los 3 nodos.
+- Para probar un corte de sede NO usar `ip link set eth0 down` sin luego `ip route replace default via 100.64.N.1` (el kernel borra la ruta por defecto).
+- Si se mata charon en un kit con imagen antigua: `swanctl --load-all` (la imagen nueva ya lo hace sola).
+- Zabbix 7 dibuja los mapas en el navegador (map.php devuelve JSON): la captura del mapa se hace desde monitor.evervc.dev.
+
+## Siguiente paso (F9)
+restic: homes de ts1, archivo y dumps del portal → nas-a (bucket con Object Lock), replicado a nas-b; `scripts/backup-configs.sh` (config.xml de OPNsense, OVS, FRR, swanctl) → `configs/` en git; cinta LTO simulada (contenedor `tape` detenido); alerta en Zabbix si el último respaldo tiene > 26 h.

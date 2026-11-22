@@ -45,8 +45,8 @@ docker_tpl ACC-Redis         redis:7-alpine                     2  telnet guest
 docker_tpl ACC-Authelia2     acc/authelia:1.0                   2  telnet guest
 docker_tpl ACC-Filebrowser   filebrowser/filebrowser:v2.63.23   2  none   guest
 docker_tpl ACC-Cloudflared2  acc/cloudflared:1.0                2  telnet guest
-docker_tpl ACC-Zabbix-Server zabbix/zabbix-server-pgsql:alpine-7.0-latest     2 telnet guest
-docker_tpl ACC-Zabbix-Web    zabbix/zabbix-web-nginx-pgsql:alpine-7.0-latest  2 telnet guest
+docker_tpl ACC-Zabbix-Server2 acc/zabbix-server:1.0              2  telnet guest
+docker_tpl ACC-Zabbix-Web2   acc/zabbix-web:1.0                 2  telnet guest
 docker_tpl ACC-Mailpit       axllent/mailpit:latest             2  none   guest
 docker_tpl ACC-MinIO         cgr.dev/chainguard/minio:latest    2  none   guest
 docker_tpl ACC-NAS           acc/nas:1.0                        2  telnet guest

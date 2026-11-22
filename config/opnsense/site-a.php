@@ -153,6 +153,7 @@ $rule('lan',  'pass', 'GESTION: gestión, NTP y actualizaciones', ['log' => '0']
 $rule('opt2', 'pass', 'SERVIDORES -> GESTION (syslog/SNMP traps)', ['destination_net' => 'lan']);
 $rule('opt2', 'pass', 'SERVIDORES -> Internet (actualizaciones)', ['destination_net' => '10.0.0.0/8', 'destination_not' => '1', 'log' => '0']);
 $rule('opt2', 'pass', 'SERVIDORES -> otro sitio (réplicas)', ['destination_net' => '10.20.0.0/16', 'log' => '0']);
+$rule('opt2', 'pass', 'MONITOREO: zbx-server -> todos los equipos (ping, SNMP, puertos de servicio)', ['source_net' => '10.10.20.30/32', 'log' => '0']);
 $rule('opt2', 'block', 'SERVIDORES: resto bloqueado');
 wan_ab_rules($rule, 'a');
 $rule('opt3', 'pass', 'DMZ -> servicios publicados', ['destination_net' => 'opt2', 'protocol' => 'TCP', 'destination_port' => 'PUERTOS_PUBLICADOS']);

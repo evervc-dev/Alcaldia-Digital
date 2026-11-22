@@ -30,3 +30,8 @@ rule() { call POST gateway/rules "$1" >/dev/null && echo "5) Gateway: $(echo "$1
 rule '{"name":"ACC DNS lam.evervc.dev interno","action":"override","filters":["dns"],"enabled":true,"precedence":100,"traffic":"any(dns.domains[*] == \"lam.evervc.dev\")","rule_settings":{"override_ips":["10.10.30.10"]}}'
 rule "$(python3 -c 'import json,sys;print(json.dumps({"name":"ACC permitir equipo TI: LAM y escritorios","action":"allow","filters":["l4"],"enabled":True,"precedence":200,"traffic":"(net.dst.ip == 10.10.30.10 and net.dst.port == 443) or (net.dst.ip == 10.10.20.40 and net.dst.port == 3389)","identity":sys.argv[1]}))' "$IDENT")"
 rule '{"name":"ACC bloquear resto de la red del laboratorio","action":"block","filters":["l4"],"enabled":true,"precedence":300,"traffic":"net.dst.ip in {10.10.0.0/16 10.20.0.0/16}"}'
+# 6) Cloudflare Access delante de monitor.evervc.dev (Zabbix): solo WARP_EMAILS con PIN por correo (+ login propio de Zabbix)
+MBODY=$(python3 -c 'import json,sys;print(json.dumps({"type":"self_hosted","name":"ACC Monitoreo (Zabbix)","domain":"monitor."+sys.argv[3],"allowed_idps":[sys.argv[1]],"auto_redirect_to_identity":True,"session_duration":"8h","app_launcher_visible":True,"policies":[{"name":"Equipo TI","decision":"allow","include":[{"email":{"email":e}} for e in json.loads(sys.argv[2])]}]}))' "$IDP" "$EMAILS_JSON" "$CF_ZONE")
+MAPP=$(call GET access/apps | j 'print(next((a["id"] for a in d["result"] if a.get("name")=="ACC Monitoreo (Zabbix)"),""))')
+if [ -z "$MAPP" ]; then call POST access/apps "$MBODY" >/dev/null; else call PUT "access/apps/$MAPP" "$MBODY" >/dev/null; fi
+echo "6) Access monitor.$CF_ZONE: solo equipo TI (PIN por correo): OK"

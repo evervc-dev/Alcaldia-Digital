@@ -35,3 +35,9 @@ if [ "$SITE" = A ]; then
   put lam /etc/acc/lam-perfil.json < config/lam/lam-perfil.json
   printf "SVC_LDAP_PASS='%s'\nLAM_MASTER_PASS='%s'\n" "$SVC_LDAP_PASS" "$LAM_MASTER_PASS" | put lam /etc/acc/lam.env
 fi
+# --- Zabbix (solo Site A) ---
+if [ "$SITE" = A ]; then
+  printf "POSTGRES_USER='zabbix'\nPOSTGRES_PASSWORD='%s'\nPOSTGRES_DB='zabbix'\nPGDATA='/var/lib/postgresql/data/pgdata'\n" "$ZABBIX_DB_PASS" | put zbx-db /etc/acc/pg.env
+  printf "DB_SERVER_HOST='10.10.20.34'\nPOSTGRES_USER='zabbix'\nPOSTGRES_PASSWORD='%s'\nPOSTGRES_DB='zabbix'\nZBX_STARTPINGERS='5'\nZBX_STARTHTTPPOLLERS='5'\nZBX_TIMEOUT='10'\n" "$ZABBIX_DB_PASS" | put zbx-server /etc/acc/zbx.env
+  printf "DB_SERVER_HOST='10.10.20.34'\nPOSTGRES_USER='zabbix'\nPOSTGRES_PASSWORD='%s'\nPOSTGRES_DB='zabbix'\nZBX_SERVER_HOST='10.10.20.30'\nZBX_SERVER_NAME='Alcaldía Digital'\nPHP_TZ='America/El_Salvador'\n" "$ZABBIX_DB_PASS" | put zbx-web /etc/acc/zbx.env
+fi

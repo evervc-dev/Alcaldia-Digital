@@ -1,0 +1,11 @@
+# zbx-web: Zabbix frontend (puerto 8080)
+# bond0 active-backup: eth0 -> sw-a1 (camino A), eth1 -> sw-a2 (camino B); monitoreo ARP al gateway (VIP)
+auto bond0
+iface bond0 inet static
+	pre-up ip link add bond0 type bond 2>/dev/null || true
+	pre-up echo active-backup > /sys/class/net/bond0/bonding/mode; echo 200 > /sys/class/net/bond0/bonding/arp_interval; echo +10.10.20.1 > /sys/class/net/bond0/bonding/arp_ip_target
+	pre-up ip link set eth0 down; ip link set eth1 down; echo +eth0 > /sys/class/net/bond0/bonding/slaves; echo +eth1 > /sys/class/net/bond0/bonding/slaves
+	address 10.10.20.33
+	netmask 255.255.255.0
+	gateway 10.10.20.1
+	up printf 'search ad.alcaldia.lab\nnameserver 10.10.20.10\nnameserver 10.20.20.10\n' > /etc/resolv.conf

@@ -8,7 +8,7 @@ echo "== Host"
 chk "virbr0 (NAT libvirt) arriba" "ip -4 addr show virbr0 | grep -q 192.168.122.1"
 chk "módulos bonding/openvswitch/8021q" "lsmod | grep -q '^bonding' && lsmod | grep -q '^openvswitch' && lsmod | grep -q '^8021q'"
 echo "== Contenedores GNS3"
-N=$(docker ps --format '{{.Names}}' | grep -c "\.$P$"); [ "$N" -ge 42 ] && ok "$N contenedores en marcha (4 de B en espera, detenidos a propósito)" || ko "solo $N contenedores en marcha (esperado ≥42)"
+N=$(docker ps --format '{{.Names}}' | grep -c "\.$P$"); [ "$N" -ge 47 ] && ok "$N contenedores en marcha (4 de B en espera, detenidos a propósito)" || ko "solo $N contenedores en marcha (esperado ≥47)"
 echo "== Red / WAN"
 chk "Internet desde Site A (adm-pc → 1.1.1.1)" "docker exec GNS3.adm-pc.$P ping -c2 -W2 1.1.1.1"
 chk "Internet desde Site B (adm-pc-b → 1.1.1.1)" "docker exec GNS3.adm-pc-b.$P ping -c2 -W2 1.1.1.1"
@@ -29,4 +29,18 @@ for n in 01 02 03; do
   T=$(docker exec GNS3.kit-sede-$n.$P sh -c 'swanctl --list-sas 2>/dev/null | grep -c ESTABLISHED' 2>/dev/null); O=$(docker exec GNS3.kit-sede-$n.$P sh -c 'vtysh -c "show ip ospf neighbor" | grep -c Full' 2>/dev/null)
   [ "$T" = 3 ] && [ "$O" = 3 ] && ok "kit-sede-$n: 3 túneles y 3 OSPF Full" || ko "kit-sede-$n: túneles=$T OSPF=$O (esperado 3/3)"
 done
+echo "== Monitoreo (F8)"
+chk "Zabbix server en marcha" "docker exec GNS3.zbx-server.$P pgrep -f zabbix_server"
+chk "Frontend Zabbix responde" "docker exec GNS3.zbx-web.$P sh -c 'wget -qO- http://127.0.0.1:8080/ | grep -q Zabbix'"
+chk "SNMP de los kits accesible desde Zabbix" "docker exec GNS3.zbx-server.$P nc -zu -w2 10.100.1.1 161"
+chk "monitor.evervc.dev protegido por Cloudflare Access (302)" "curl -s -o /dev/null -w '%{redirect_url}' --max-time 15 https://monitor.evervc.dev/ | grep -q cloudflareaccess.com"
+PROB=$(set -a; . ./.env; set +a; docker exec -i -e ZABBIX_ADMIN_PASS GNS3.portal.$P python3 -c '
+import json,os,urllib.request as u
+def a(m,p,t=None):
+    r=u.Request("http://10.10.20.33:8080/api_jsonrpc.php",json.dumps({"jsonrpc":"2.0","method":m,"params":p,"id":1}).encode(),{"Content-Type":"application/json-rpc"})
+    t and r.add_header("Authorization","Bearer "+t); return json.load(u.urlopen(r,timeout=20))["result"]
+t=a("user.login",{"username":"Admin","password":os.environ["ZABBIX_ADMIN_PASS"]})
+print("; ".join(p["name"] for p in a("problem.get",{"output":["name"],"severities":[3,4,5]},t)))' 2>/dev/null || echo "API de Zabbix no disponible")
+[ -z "$PROB" ] && ok "Zabbix: sin problemas de severidad media o superior" || ko "Zabbix reporta: $PROB"
+
 echo; [ $FAIL = 0 ] && echo "RESULTADO: todo OK" || echo "RESULTADO: $FAIL comprobación(es) fallida(s) — ver ESTADO.md (gotchas)"

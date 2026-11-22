@@ -3,7 +3,7 @@
 # Tokens e IDs de túnel -> .env (CF_TUNNEL_TOKEN_A/B, CF_TUNNEL_ID_A/B). Nunca se imprimen.
 set -euo pipefail; cd "$(dirname "$0")/.."; set -a; . ./.env; set +a
 API=https://api.cloudflare.com/client/v4; H=(-H "Authorization: Bearer $CF_API_TOKEN" -H "Content-Type: application/json")
-HOSTS="${CF_HOSTS:-portal archivo auth}"
+HOSTS="${CF_HOSTS:-portal archivo auth monitor}"
 py() { python3 -c "import sys,json; d=json.load(sys.stdin); $1"; }
 setenv() { grep -q "^$1=" .env && sed -i "s|^$1=.*|$1=$2|" .env || echo "$1=$2" >> .env; }
 ZID=$(curl -fsS "${H[@]}" "$API/zones?name=$CF_ZONE" | py 'print(d["result"][0]["id"])')

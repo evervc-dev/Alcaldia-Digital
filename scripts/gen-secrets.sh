@@ -17,3 +17,5 @@ fill LAB_USER_PASS "Demo-$(rnd 10)-4q"            # contraseña común de los us
 fill MINIO_ROOT_PASS "$(rnd 28)"
 fill LAM_MASTER_PASS "$(rnd 24)"           # contraseña maestra de configuración de LAM
 fill IPSEC_PSK_SEDES "$(rnd 40)"            # PSK de los túneles de las sedes
+fill ZABBIX_ADMIN_PASS "Zbx-$(rnd 16)-3m"       # usuario Admin del frontend de Zabbix
+fill ZBX_SNMP_COMMUNITY "acc$(rnd 20)"          # comunidad SNMP de solo lectura (solo zbx-server)
