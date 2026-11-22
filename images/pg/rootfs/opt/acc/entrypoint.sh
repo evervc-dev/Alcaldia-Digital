@@ -23,4 +23,5 @@
   done
 ) &
 echo "[acc] PostgreSQL arrancará cuando exista /etc/acc/pg.env"
+for d in /etc/acc /var/lib/samba/acc /config/acc /data/.acc; do [ -x $d/respaldo.sh ] && { $d/respaldo.sh bucle & break; }; done   # F9: respaldo diario
 exec /bin/bash -l

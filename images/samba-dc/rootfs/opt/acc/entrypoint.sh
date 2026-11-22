@@ -6,4 +6,5 @@ if [ -f /var/lib/samba/private/sam.ldb ]; then
 else
   echo "[acc] dominio NO provisionado: ejecutar el procedimiento de F4"
 fi
+for d in /etc/acc /var/lib/samba/acc /config/acc /data/.acc; do [ -x $d/respaldo.sh ] && { $d/respaldo.sh bucle & break; }; done   # F9: respaldo diario
 exec /bin/bash -l

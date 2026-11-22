@@ -16,3 +16,4 @@ IMAGES=(
   cgr.dev/chainguard/minio:latest
 )
 for i in "${IMAGES[@]}"; do echo "== $i"; docker pull -q "$i"; done
+docker pull -q restic/restic:0.17.3   # F9: binario estático de restic para las imágenes

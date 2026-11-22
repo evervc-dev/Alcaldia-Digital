@@ -223,6 +223,21 @@ for t in api("trigger.get", {"hostids": [HOSTS[f"kit-sede-{N:02d}"] for N in (1,
                              "search": {"description": "sin ningún túnel activo"}}):
     api("trigger.delete", [t["triggerid"]])
 
+# ---------- Respaldos (F9): antigüedad del último snapshot restic de cada equipo ----------
+# Comprobación externa en zbx-server (restic con la cuenta de SOLO LECTURA, sin bloquear el repositorio);
+# el JSON se convierte en segundos con JavaScript. Diario a las 02:00 -> alerta si pasan más de 26 h.
+JS_EDAD = ("var s = JSON.parse(value); if (!s.length) { return 999999999; }"
+           " var t = s[0].time.replace(/\\.\\d+/, ''); return Math.floor(Date.now() / 1000 - Date.parse(t) / 1000);")
+for eq in ("ts1", "archivo", "portal-db", "dc1"):
+    hid = HOSTS[eq]
+    key = f'restic-ultimo.sh["{eq}"]'
+    item(hid, None, "Respaldo: antigüedad del último (restic)", key, type=10, delay="15m", units="s", timeout="60s",
+         preprocessing=[{"type": 21, "params": JS_EDAD, "error_handler": 0, "error_handler_params": ""}])
+    trigger(hid, f"{eq}: sin respaldo en más de 26 h", f"last(/{eq}/{key})>93600", SEV["high"],
+            "El respaldo diario (02:00) no se ha completado. Ver /var/log/respaldo.log en el equipo.")
+    trigger(hid, f"{eq}: no se puede comprobar el respaldo", f"nodata(/{eq}/{key},2h)=1", SEV["average"],
+            "Zabbix no puede leer el repositorio restic en nas-a.")
+
 # ---------- Servicio público (ruta Internet -> Cloudflare -> túnel -> DMZ) ----------
 hid, _ = host("internet-evervc", None, "Internet", desc="Servicios publicados en Internet vía Cloudflare Tunnel.")
 HOSTS["internet-evervc"] = hid

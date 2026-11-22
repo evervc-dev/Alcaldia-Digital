@@ -13,5 +13,6 @@ ovs-vsctl set port eth9 tag=20    # portal-b (espera)
 ovs-vsctl set port eth10 tag=20   # archivo-b (espera)
 ovs-vsctl set port eth11 tag=20   # authelia-b (espera)
 ovs-vsctl set port eth12 tag=20   # gate-b (espera)
-for p in eth0 eth2 eth13 eth14; do ovs-vsctl --if-exists set port $p tag=999; done
+ovs-vsctl set port eth13 tag=60         # tape (cinta LTO simulada, RESPALDO B)
+for p in eth0 eth2 eth14; do ovs-vsctl --if-exists set port $p tag=999; done
 ovs-vsctl --may-exist add-port br0 mgmt tag=10 -- set interface mgmt type=internal

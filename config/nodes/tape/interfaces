@@ -1,0 +1,6 @@
+# tape: librería LTO simulada (Site B, VLAN 60 RESPALDO). Encender -> copia a cartucho -> APAGAR.
+auto eth0
+iface eth0 inet static
+	address 10.20.60.20
+	netmask 255.255.255.0
+	gateway 10.20.60.1

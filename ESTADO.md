@@ -2,7 +2,7 @@
 
 | Campo | Valor |
 |---|---|
-| Fase actual | **F8 ✅ terminada** → siguiente: **F9 Respaldos** (restic + backup-configs) y **F10 Pruebas formales** |
+| Fase actual | **F9 ✅ terminada** → siguiente: **F10 Pruebas formales** (T1–T13, DR completo del Site A, hacking) |
 | Última actualización | 2026-11-21 ~12:10 (hora local) |
 | Plazo | 48 h → 2026-11-23 |
 | Proyectos GNS3 abiertos | `ACC-Lab` (id 88f8f32e-4b4f-4e25-9a8b-ac0c9c71c5f9) |
@@ -20,7 +20,7 @@
 | F6 Kits de sede | ✅ (docs/pruebas/F6-sedes.md) |
 | F7 Publicación Cloudflare | ✅ túneles, DNS, WARP, LAM solo vía WARP (falta: Access para monitor en F8) |
 | F8 Monitoreo (mínimo) | ✅ (docs/pruebas/F8-monitoreo.md) |
-| F9 Respaldos | ⏳ |
+| F9 Respaldos | ✅ (docs/pruebas/F9-respaldos.md) |
 | F10 Pruebas | ⏳ |
 
 ## Hecho en F0
@@ -122,7 +122,7 @@ Zabbix: zbx-db (acc/pg), zbx-server y zbx-web (oficiales) en SERVIDORES A; agent
 - Si se mata charon en un kit con imagen antigua: `swanctl --load-all` (la imagen nueva ya lo hace sola).
 - Zabbix 7 dibuja los mapas en el navegador (map.php devuelve JSON): la captura del mapa se hace desde monitor.evervc.dev.
 
-## Siguiente paso (F9)
+## (anterior) Siguiente paso (F9)
 restic: homes de ts1, archivo y dumps del portal → nas-a (bucket con Object Lock), replicado a nas-b; `scripts/backup-configs.sh` (config.xml de OPNsense, OVS, FRR, swanctl) → `configs/` en git; cinta LTO simulada (contenedor `tape` detenido); alerta en Zabbix si el último respaldo tiene > 26 h.
 
 ## Incidente tras reiniciar el PC (22/11 ~21:30 local) — resuelto
@@ -132,3 +132,17 @@ restic: homes de ts1, archivo y dumps del portal → nas-a (bucket con Object Lo
 3. **Réplica del portal > RPO** tras el corte: ahora `acc/pg` reintenta a los 5 min si la copia falla. Copia manual: el bucle de `images/pg/rootfs/opt/acc/entrypoint.sh` ejecutado a mano en portal-db-b.
 4. **Réplica AD con fallos acumulados:** `docker exec -e AP=... GNS3.dc2.<id> samba-tool drs replicate dc2 dc1 <NC> -U "administrator%$AP"` para los 5 NC (DomainDnsZones, ForestDnsZones, dominio, Configuration, Schema).
 - Gotcha: no usar `pkill -f "http.server 8088"` desde un `bash -c` que contenga esa cadena (se mata a sí mismo, exit 144).
+
+## Hecho en F9 (ver docs/pruebas/F9-respaldos.md)
+- restic diario 02:00 (ts1 /home, archivo, portal-db pg_dumpall, dc1 domain backup) → nas-a `respaldos/repo`, **COMPLIANCE 7 d**, replicado a nas-b (sin `delete`); mantenimiento en nas-a 04:00. Cinta `tape` (10.20.60.20, sw-b1 eth13) **apagada**; encenderla graba un cartucho.
+- Scripts: `nas-setup.sh` (re-ejecutable) → `respaldo-setup.sh [ahora]`; `backup-configs.sh` → `configs/` (saneado) + NAS (completo). Zabbix: antigüedad del respaldo; lab-check: sección Respaldos.
+- Secretos nuevos en .env: RESTIC_PASSWORD (¡sin ella no se restaura nada!), RESTIC_S3_KEY, RESTIC_RO_KEY. MINIO_ROOT_PASS rotada.
+
+## Errores conocidos / gotchas (F9)
+- Repositorio roto de la primera prueba en `respaldos/restic` (GOVERNANCE): se puede retirar con la cuenta admin: `mc rm -r --versions --force --bypass a/respaldos/restic` (y `b/`). No afecta a `respaldos/repo`.
+- Con COMPLIANCE nada del bucket se puede borrar antes de 7 días (por diseño).
+- `pkill -f` dentro de `sh -c`: usar el truco `[r]espaldo.sh` para no matarse a sí mismo.
+- Los alias `mc` de los NAS no persisten (contenedor recreado): `nas-setup.sh` los vuelve a crear.
+
+## Siguiente paso (F10)
+Pruebas formales T1–T13 con evidencias: failover Tier II (ya medido, re-documentar), **T8 DR completo del Site A** (dr-dns-switch.sh B, arrancar portal-b/authelia-b/gate-b/archivo-b, restaurar archivo desde nas-b, medir RTO), T5 hacking (nmap, hydra contra Authelia/SSH, aislamiento lateral), energía (camino A/B).

@@ -43,4 +43,15 @@ t=a("user.login",{"username":"Admin","password":os.environ["ZABBIX_ADMIN_PASS"]}
 print("; ".join(p["name"] for p in a("problem.get",{"output":["name"],"severities":[3,4,5]},t)))' 2>/dev/null || echo "API de Zabbix no disponible")
 [ -z "$PROB" ] && ok "Zabbix: sin problemas de severidad media o superior" || ko "Zabbix reporta: $PROB"
 
+echo "== Respaldos (F9)"
+for eq in ts1 archivo portal-db dc1; do
+  EDAD=$(docker exec GNS3.zbx-server.$P /etc/acc/restic-ultimo.sh $eq 2>/dev/null | python3 -c '
+import json,sys,re,datetime as d
+try:
+    s=json.load(sys.stdin); t=d.datetime.fromisoformat(re.sub(r"\.\d+","",s[0]["time"]).replace("Z","+00:00")); print(int((d.datetime.now(d.timezone.utc)-t).total_seconds()/3600))
+except Exception: print("?")')
+  [ "$EDAD" != "?" ] && [ "$EDAD" -lt 26 ] && ok "$eq: último respaldo hace ${EDAD} h (WORM, replicado a nas-b)" || ko "$eq: último respaldo hace ${EDAD} h (esperado < 26 h)"
+done
+chk "nas-a: Object Lock COMPLIANCE en respaldos" "docker exec GNS3.nas-a.$P sh -c 'mc retention info --default a/respaldos 2>/dev/null | grep -q COMPLIANCE'"
+
 echo; [ $FAIL = 0 ] && echo "RESULTADO: todo OK" || echo "RESULTADO: $FAIL comprobación(es) fallida(s) — ver ESTADO.md (gotchas)"

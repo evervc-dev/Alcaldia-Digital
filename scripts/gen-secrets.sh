@@ -18,4 +18,7 @@ fill MINIO_ROOT_PASS "$(rnd 28)"
 fill LAM_MASTER_PASS "$(rnd 24)"           # contraseña maestra de configuración de LAM
 fill IPSEC_PSK_SEDES "$(rnd 40)"            # PSK de los túneles de las sedes
 fill ZABBIX_ADMIN_PASS "Zbx-$(rnd 16)-3m"       # usuario Admin del frontend de Zabbix
+fill RESTIC_PASSWORD "$(rnd 40)"          # cifrado del repositorio restic (¡sin ella no se restaura nada!)
+fill RESTIC_S3_KEY "$(rnd 32)"            # usuario MinIO "restic" (escribe, no borra versiones)
+fill RESTIC_RO_KEY "$(rnd 32)"            # usuario MinIO "restic-lectura" (Zabbix)
 fill ZBX_SNMP_COMMUNITY "acc$(rnd 20)"          # comunidad SNMP de solo lectura (solo zbx-server)

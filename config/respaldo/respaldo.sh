@@ -1,0 +1,41 @@
+#!/bin/sh
+# Respaldo con restic (F9). Uso: respaldo.sh bucle | ahora
+# Vive en el volumen persistente del equipo junto a respaldo.env (lo instala scripts/respaldo-setup.sh).
+# TIPO=rutas   -> RUTAS (homes de ts1, datos de archivo)
+# TIPO=pgdump  -> pg_dumpall de la BD local (incluye roles)
+# TIPO=samba   -> samba-tool domain backup offline (copia completa del AD, recuperable con 'domain backup restore')
+# TIPO=mantenimiento (nas-a) -> retención (forget --prune) y verificación (check) del repositorio
+# Hora: HORA_UTC (08 = 02:00 en El Salvador). Retención: 7 diarias, 4 semanales, 12 mensuales.
+D=$(cd "$(dirname "$0")" && pwd); set -a; . "$D/respaldo.env"; set +a
+export RESTIC_CACHE_DIR=/tmp/restic-cache
+LOG=/var/log/respaldo.log; TMP=/tmp/respaldo-acc; mkdir -p /var/log
+
+uno() {
+  rm -rf "$TMP"; mkdir -p "$TMP"
+  case "$TIPO" in
+    rutas)  restic backup -q --host "$EQUIPO" --tag "$EQUIPO" $EXCLUIR $RUTAS ;;
+    pgdump) PGPASSWORD="$POSTGRES_PASSWORD" pg_dumpall -h 127.0.0.1 -U "$POSTGRES_USER" > "$TMP/$EQUIPO.sql" \
+              && restic backup -q --host "$EQUIPO" --tag "$EQUIPO" "$TMP" ;;
+    samba)  samba-tool domain backup offline --targetdir="$TMP" >/dev/null 2>&1 \
+              && restic backup -q --host "$EQUIPO" --tag "$EQUIPO" "$TMP" ;;
+    mantenimiento) restic forget -q --keep-daily 7 --keep-weekly 4 --keep-monthly 12 --prune && restic check -q ;;
+    *) echo "TIPO desconocido: $TIPO"; return 1 ;;
+  esac
+  rc=$?; rm -rf "$TMP"; return $rc
+}
+
+ejecutar() {
+  t0=$(date +%s)
+  if out=$(uno 2>&1); then echo "$(date -Iseconds) OK $EQUIPO ($TIPO) en $(( $(date +%s) - t0 )) s" >> $LOG
+  else echo "$(date -Iseconds) FALLO $EQUIPO ($TIPO): $(echo "$out" | tail -2 | tr '\n' ' ')" >> $LOG; return 1; fi
+}
+
+case "${1:-ahora}" in
+  ahora) ejecutar; tail -1 $LOG ;;
+  bucle)
+    while true; do
+      now=$(date +%s); next=$(( now / 86400 * 86400 + ${HORA_UTC:-8} * 3600 )); [ $next -le $now ] && next=$(( next + 86400 ))
+      sleep $(( next - now ))
+      ejecutar || { sleep 1800; ejecutar; }   # un reintento a los 30 min
+    done ;;
+esac

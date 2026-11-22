@@ -26,7 +26,7 @@
 1. Enciende el PC. No hace falta preparar nada del host: módulos, red NAT de libvirt, ufw, busybox y `gns3_server.conf` ya son persistentes.
 2. Abre la GUI de GNS3 → **File → Open project → ACC-Lab**.
 3. **▶ Start all**.
-   - Después **detén** los 4 nodos *en espera* del Site B: `portal-b`, `authelia-b`, `gate-b` y `archivo-b`. Solo se encienden en una recuperación ante desastre (DR).
+   - Después **detén** los 4 nodos *en espera* del Site B (`portal-b`, `authelia-b`, `gate-b`, `archivo-b`; solo se encienden en una recuperación ante desastre) y la cinta **`tape`**, que debe estar apagada (solo se enciende para grabar un cartucho).
 4. Espera unos **4 min**. En ese tiempo arrancan los OPNsense, suben los túneles A↔B y de las sedes, Samba, Authelia y Zabbix.
 5. Comprueba el laboratorio:
    ```bash
@@ -73,6 +73,11 @@ cd ~/Documents/acc-project/Alcaldia-Digital/config/opnsense && python3 -m http.s
 `<id>` es el identificador del proyecto: `88f8f32e-4b4f-4e25-9a8b-ac0c9c71c5f9`.
 
 ---
+
+## 💾 Respaldos (automáticos)
+- Cada noche a las **02:00** se respaldan ts1, archivo, portal-db y dc1 en el NAS (no hay que hacer nada; si el PC está apagado a esa hora, ese día no hay copia y Zabbix avisa a las 26 h).
+- **Grabar una cinta:** encender el nodo `tape`, esperar ~1 min, ver `docker exec GNS3.tape.<id> cat /data/cartuchos/registro.log` y **apagarlo**.
+- **Respaldar configuraciones de red:** `bash scripts/backup-configs.sh` y después commit de `configs/`.
 
 ## 💡 Consejos
 - **Pausa corta sin apagar el PC:** en *File → Edit project*, la opción «Leave this project running in the background when closing GNS3» permite cerrar solo la GUI con el laboratorio en marcha.

@@ -8,6 +8,8 @@ USER root
 RUN apk add --no-cache su-exec bash psqlodbc   # psqlodbc: comprobación de la réplica (RPO) por ODBC
 ENV ACC_CMD=${ACC_CMD}
 COPY rootfs/ /
+# F9: restic (binario estático oficial) para los respaldos
+COPY --from=restic/restic:0.17.3 /usr/bin/restic /usr/local/bin/restic
 RUN chmod +x /opt/acc/entrypoint.sh
 VOLUME ["/etc/acc"]
 ENTRYPOINT []
