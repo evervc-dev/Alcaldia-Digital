@@ -32,7 +32,7 @@ cfg() { printf "INSERT INTO glpi_configs (context,name,value) VALUES ('core','%s
 echo "SQL: API (solo 10.10.20.0/24), español, URL pública, SSO Remote-User, correo -> mailpit, 'glpi' con contraseña del .env, cuentas de ejemplo desactivadas"
 
 # ---------- 2) API ----------
-docker exec -i -e GLPI_ADMIN_PASS -e GLPI_ZABBIX_PASS -e SVC_LDAP_PASS "$(C portal)" python3 - <<'PY'
+docker exec -i -e GLPI_ADMIN_PASS -e GLPI_ZABBIX_PASS -e GLPI_PORTAL_PASS -e SVC_LDAP_PASS "$(C portal)" python3 - <<'PY'
 import base64, json, os, urllib.request, urllib.error
 U = "http://10.10.20.31/apirest.php"
 def call(method, path, body=None, auth=None):
@@ -92,6 +92,17 @@ if not any(str(pu.get("profiles_id")) == str(PROF["Technician"]) for pu in pus):
 for pu in pus:   # GLPI le añade Self-Service al crearlo: la sesión API entraría con él y no podría resolver tickets
     if str(pu.get("profiles_id")) != str(PROF["Technician"]): call("DELETE", f"/Profile_User/{pu['id']}")
 call("PUT", f"/User/{zid}", {"input": {"profiles_id": PROF["Technician"]}})   # perfil por defecto
+# Cuenta de servicio del portal (Self-Service): cada reporte ciudadano de /reportar abre un ticket P4 (Fase 4 §2.2)
+pu = find("User", name="portal")
+dp = {"realname": "Portal ciudadano", "firstname": "Reportes", "is_active": 1, "comment": "Cuenta de servicio: el portal abre tickets P4 por la API"}
+if pu: call("PUT", f"/User/{pu['id']}", {"input": dp}); pid_ = pu["id"]
+else: pid_ = call("POST", "/User", {"input": {"name": "portal", **dp, "password": os.environ["GLPI_PORTAL_PASS"],
+                                               "password2": os.environ["GLPI_PORTAL_PASS"]}})["id"]
+if not any(str(x.get("profiles_id")) == str(PROF["Self-Service"]) for x in call("GET", f"/User/{pid_}/Profile_User") or []):
+    call("POST", "/Profile_User", {"input": {"users_id": pid_, "profiles_id": PROF["Self-Service"], "entities_id": 0, "is_recursive": 1}})
+upsert("ITILCategory", {"name": "Portal ciudadano: reporte de falla"}, {"comment": "Reportes de la ciudadanía desde portal.evervc.dev/reportar (P4)",
+                                                                         "is_helpdeskvisible": 1})
+print("API: usuario portal (Self-Service) y categoría «Portal ciudadano: reporte de falla»")
 cat = upsert("ITILCategory", {"name": "Infraestructura (alerta de Zabbix)"}, {"comment": "Tickets abiertos automáticamente por el monitoreo",
                                                                             "is_helpdeskvisible": 0})
 print(f"API: usuario zabbix (Technician), categoría {cat}")

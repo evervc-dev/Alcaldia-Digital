@@ -32,6 +32,7 @@
 | URL | Qué es | Protección |
 |---|---|---|
 | `https://portal.evervc.dev/` | Portal ciudadano: inicio, `POST /solicitar`, `GET /consulta?folio=...` | Pública |
+| `https://portal.evervc.dev/reportar` | Reporte ciudadano de fallas → **ticket P4 en GLPI** (folio `R-…` consultable en `/consulta`) | Pública (campo trampa, máx. 20 reportes/min) |
 | `https://portal.evervc.dev/funcionarios` | Bandeja de trámites y `POST /funcionarios/atender` | Authelia (AD + TOTP), grupos `funcionarios` o `acceso-24h`, **horario** (gate) |
 | `https://archivo.evervc.dev/` | Archivo documental (filebrowser), carpeta por usuario | Authelia + horario; usuario por cabecera `Remote-User` |
 | `https://auth.evervc.dev/` | Login único (Authelia): contraseña del AD + TOTP; 3 fallos ⇒ bloqueo de 5 min | — |
@@ -91,7 +92,7 @@
 | Nodo | Función |
 |---|---|
 | `fw-b` | OPNsense único (`10.20.x.1`) |
-| `sw-b1`, `sw-b2` | Switches OVS |
+| `sw-b1`, `sw-b2` | Switches OVS. Todo cuelga de `sw-b1` (Tier I, sin redundancia automática); `sw-b2` es **repuesto en caliente y expansión** (troncal con las VLAN de B, puertos de acceso aparcados): si `sw-b1` falla, se mueven los cables |
 | `dc2` | Segundo DC (réplica del AD, DNS secundario) |
 | `portal-db-b` | Réplica de la BD del portal (copia cada hora; RPO 1 h) |
 | `portal-b`, `authelia-b`, `gate-b`, `archivo-b` | **Apagados en espera**: se encienden solo en un DR |
@@ -138,6 +139,7 @@
 | 16 | *Stop* de `lam` (o de cualquier servidor) y luego *Start* | Zabbix abre un **ticket en GLPI** (`mesa.evervc.dev`, categoría «Infraestructura», asignado a `zabbix`, urgencia según la severidad). Al volver, el ticket pasa a **Resuelto** con la solución automática. En Zabbix, el problema tiene el enlace «Ticket GLPI #N» | ticket ≈ 60 s · cierre < 1 min |
 | 17 | Entrar a `mesa.evervc.dev` con `ana.funcionaria` y con `tecnico.soporte` | Ana ve la vista simple (crear/seguir sus tickets); el técnico ve la vista completa con todos los tickets. Ninguno escribe contraseña en GLPI (SSO) | — |
 | 18 | Desde `atacante-ext`: `nmap -Pn -sS -p 22,1433,1521,3306,5432,5900-5905 203.0.113.4` | Suricata alerta («ET SCAN…»); en < 1 min la IP 198.18.0.66 queda **bloqueada 1 h** en las WAN; Zabbix: «IDS detectó un ataque» (alta) → **ticket en GLPI**. Para repetir antes de la hora: `pfctl -t ACC_IDS_BLOQUEO -T flush` en el firewall | bloqueo ≈ 40 s · ticket ≈ 1 min |
+| 19 | En `https://portal.evervc.dev/reportar` enviar un reporte; repetir con `glpi` apagado y luego encenderlo | Folio `R-…` y **ticket P4** (prioridad Baja, categoría «Portal ciudadano») en GLPI. Con GLPI caído: «Pendiente de registro» y se registra solo al volver | ticket inmediato · pendiente < 5 min tras volver |
 
 Pruebas automáticas equivalentes: `scripts/test-zones.sh` (50 flujos), `scripts/f10-sonda.sh` (mide cortes) y `scripts/lab-check.sh` (estado general).
 
@@ -153,6 +155,7 @@ Pruebas automáticas equivalentes: `scripts/test-zones.sh` (50 flujos), `scripts
 - **Portal:**
   - FastAPI genera un folio (`AAAAMMDD-XXXXXX`) y lo guarda en `portal-db`.
   - `/funcionarios` recibe el usuario por la cabecera `Remote-User` que pone nginx tras el login.
+  - `/reportar` guarda el reporte en `portal-db` (tabla `reportes`) y abre un ticket P4 en GLPI con la cuenta de servicio `portal` (Self-Service). Si GLPI no responde (caída o DR en el Site B) queda pendiente y se reintenta cada 5 min; tras un DR, `dr-retorno-a.sh` trae los pendientes de B a A con la BD.
 - **Túneles de sede:**
   - Cada kit **inicia** 3 túneles IKEv2 (atraviesan el CGNAT con NAT-T) hacia la VIP de A por WAN1 (coste 10), por WAN2 (coste 20) y hacia B (coste 100).
   - OSPF elige el de menor coste.
@@ -210,7 +213,7 @@ Pruebas automáticas equivalentes: `scripts/test-zones.sh` (50 flujos), `scripts
 - **Publicación segura:** Cloudflare Tunnel, Zero Trust/WARP y Access para el monitoreo.
 - **IDS/IPS:** Suricata en las WAN con respuesta activa (bloqueo 1 h), alerta y ticket (probado en A y B).
 - **Monitoreo:** Zabbix con alertas por correo, mapa de red y supervisión de túneles, réplica, NAS y respaldos.
-- **Mesa de servicio:** GLPI en `mesa.evervc.dev` con SSO del AD, perfiles por grupo y tickets automáticos desde Zabbix (abrir y resolver, probado).
+- **Mesa de servicio:** GLPI en `mesa.evervc.dev` con SSO del AD, perfiles por grupo y tickets automáticos desde Zabbix (abrir y resolver, probado); la ciudadanía reporta fallas desde el portal (ticket P4, probado también con GLPI caído).
 - **Respaldos 3-2-1:** WORM COMPLIANCE, réplica a nas-b, cinta y respaldo de configuraciones; resistentes al ransomware (probado).
 - **Tareas programadas:** respaldo de configuraciones diario y cinta semanal automáticos (temporizador systemd en el host), vigilados por Zabbix.
 - **Pruebas formales:** T1–T8 con evidencias; T9 documentada.

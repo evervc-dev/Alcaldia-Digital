@@ -33,3 +33,13 @@
 - GLPI añade Self-Service (perfil por defecto) a los usuarios creados por API: la sesión de `zabbix` no podía resolver tickets. `glpi-setup.sh` deja solo Technician como perfil por defecto.
 - GLPI rechaza volver a poner la misma contraseña (historial): `glpi-setup.sh` solo la fija al crear el usuario.
 - Tickets #1 y #2 son de estas pruebas (el #1 se cerró a mano, el #2 con la cuenta `zabbix` por la API).
+
+## Reporte ciudadano de fallas → ticket P4 (Fase 4 §2.2)
+- `https://portal.evervc.dev/reportar` (público): nombre, contacto opcional, sede, tipo de falla y detalle. Se guarda en `portal-db` (tabla `reportes`, folio `R-AAAAMMDD-XXXXXX`) y se abre un ticket con la cuenta `portal` (Self-Service): urgencia e impacto bajos → **prioridad Baja = P4**, categoría «Portal ciudadano: reporte de falla».
+- Sin GLPI (caída o DR en B): «Pendiente de registro»; un hilo del portal reintenta cada 5 min. Antiabuso: campo trampa, longitudes máximas y 20 reportes/min.
+
+| # | Prueba | Resultado |
+|---|---|---|
+| G10 | Reporte desde Internet (con `<script>` en el detalle) | ✅ folio `R-20261123-C3EAB9` → **ticket #7**, prioridad 2 (Baja), HTML escapado |
+| G11 | Categoría y hora local | ✅ ticket #8 en «Portal ciudadano: reporte de falla»; consulta con hora de El Salvador |
+| G12 | Reporte con `glpi` apagado y encendido después | ✅ «Pendiente de registro» → **ticket #9** a los 274 s de volver GLPI |

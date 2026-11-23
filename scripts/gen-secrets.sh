@@ -26,3 +26,4 @@ fill GLPI_DB_PASS "$(rnd 24)"              # MariaDB: usuario glpi
 fill GLPI_DB_ROOT_PASS "$(rnd 24)"         # MariaDB: root (solo local en glpi-db)
 fill GLPI_ADMIN_PASS "Glpi-$(rnd 16)-5w"   # cuenta local de emergencia 'glpi' (super-admin) de GLPI
 fill GLPI_ZABBIX_PASS "Zbx-$(rnd 20)-8t"     # usuario GLPI "zabbix" (API): Zabbix abre/cierra tickets
+fill GLPI_PORTAL_PASS "Prt-$(rnd 20)-6v"   # usuario GLPI "portal" (API): reportes ciudadanos -> tickets P4

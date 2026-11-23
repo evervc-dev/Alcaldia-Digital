@@ -25,6 +25,8 @@ chk "ts1: xrdp escuchando :3389" "docker exec GNS3.cloudflared-a.$P nc -z -w3 10
 chk "NAS A/B vivos" "docker exec GNS3.nas-a.$P curl -sf http://127.0.0.1:9000/minio/health/live && docker exec GNS3.nas-a.$P curl -sf http://10.20.60.10:9000/minio/health/live"
 chk "Réplica del portal en B (< 2 h)" "docker exec GNS3.portal-db-b.$P sh -c 'f=/var/lib/postgresql/data/pgdata/replica_ok; [ \$(( \$(date +%s) - \$(date -d \$(cat \$f) +%s 2>/dev/null || stat -c %Y \$f) )) -lt 7200 ]'"
 chk "Mesa de servicio: GLPI responde y mesa.evervc.dev pide MFA (302)" "docker exec GNS3.portal.$P python3 -c 'import urllib.request;urllib.request.urlopen(\"http://10.10.20.31/\",timeout=8)' && [ \$(curl -s -o /dev/null -w '%{http_code}' --max-time 15 https://mesa.evervc.dev/) = 302 ]"
+reportes_pendientes() { docker exec "GNS3.portal-db.$P" sh -c '. /etc/acc/pg.env; PGPASSWORD=$POSTGRES_PASSWORD psql -tA -h 127.0.0.1 -U $POSTGRES_USER -d portal -c "select count(*) from reportes where ticket is null and creado < now() - interval '"'"'10 min'"'"'"' 2>/dev/null; }
+chk "Portal: reportes ciudadanos registrados en GLPI (ninguno pendiente > 10 min)" "[ \"\$(reportes_pendientes)\" = 0 ]"
 chk "API de GLPI cerrada desde Internet (403)" "[ \$(curl -s -o /dev/null -w '%{http_code}' --max-time 15 https://mesa.evervc.dev/apirest.php/initSession) = 403 ]"
 chk "IDS: Suricata en marcha en fw-a1, fw-a2 y fw-b (WAN1+WAN2)" "for f in fw-a1 fw-a2 fw-b; do bash scripts/fw.sh \$f 'service suricata status' 2>/dev/null | grep -q 'is running' || exit 1; done"
 echo "== Sedes"
