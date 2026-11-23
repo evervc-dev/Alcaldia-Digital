@@ -14,6 +14,11 @@
 2. **Guardar el trabajo en git**: haz *push* desde VS Code si hay commits pendientes.
 3. En la GUI de GNS3: **■ Stop all**. Espera a que **todos** los nodos queden en rojo; los 3 OPNsense tardan 1–2 min en apagarse por ACPI.
    - ⚠️ No fuerces el cierre mientras los OPNsense siguen en verde: podría corromperse su disco.
+   - **(Opcional) Copia completa del laboratorio** con todo el estado: aprovecha que los nodos están detenidos.
+     ```bash
+     bash scripts/exportar-entrega.sh --solo-completo
+     ```
+     El archivo queda en `~/Documents/acc-project/entrega/privado/`. Lleva **secretos**: no lo compartas; la entrega usa la topología sin volúmenes.
 4. **File → Close project** y después cierra la GUI de GNS3.
 5. Apaga el PC con normalidad.
 

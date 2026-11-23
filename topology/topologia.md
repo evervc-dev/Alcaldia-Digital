@@ -42,3 +42,8 @@ Camino de energía: **A** = UPS A / circuito A; **B** = UPS B / circuito B; **AB
 | pc-0N-a, pc-0N-b | ACC-PC | eth0 LAN (DHCP) |
 
 `*` = detenido (sitio tibio).
+
+## Diagrama
+![Topología GNS3](topologia.png)
+
+`topologia.png` y `topologia.svg` se generan desde el lienzo de GNS3: export del MCP (`topologia-gns3.svg`) → fuente DejaVu y texto sin recortar → `rsvg-convert -b white -z 1.4`. La entrega completa (topología portátil, diagrama, configuraciones, pruebas e imágenes) la arma `scripts/exportar-entrega.sh` en `../entrega/`, fuera del repositorio.
