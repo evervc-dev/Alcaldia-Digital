@@ -40,7 +40,7 @@
             tag: 20
             Interface eth4
         Port eth0
-            tag: 999
+            tag: 20
             Interface eth0
         Port eth2
             tag: 20
@@ -67,7 +67,7 @@
             tag: 20
             Interface eth23
         Port eth5
-            tag: 999
+            tag: 20
             Interface eth5
         Port eth22
             tag: 20

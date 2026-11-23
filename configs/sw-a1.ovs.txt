@@ -20,7 +20,7 @@ f506adf6-9ff2-4f95-8005-da1dc8edbf79
             tag: 20
             Interface eth13
         Port eth8
-            tag: 999
+            tag: 20
             Interface eth8
         Port br0
             Interface br0
@@ -91,5 +91,5 @@ f506adf6-9ff2-4f95-8005-da1dc8edbf79
             tag: 50
             Interface eth5
         Port eth0
-            tag: 999
+            tag: 20
             Interface eth0
