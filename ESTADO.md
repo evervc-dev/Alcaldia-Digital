@@ -179,3 +179,10 @@ Pruebas formales T1–T13 con evidencias: failover Tier II (ya medido, re-docume
 - `glpi-setup.sh` no cambia contraseñas ya puestas (GLPI rechaza reutilizarlas). Para rotar `GLPI_ZABBIX_PASS`: cambiarla en GLPI, en `.env` y volver a ejecutar `zbx-setup.sh` (macro secreta).
 - GLPI no está en el DR (como Zabbix y LAM): `mesa.evervc.dev` no se mueve al Site B; se restaura desde los respaldos si hiciera falta.
 - **Tras reabrir el proyecto (22/11 noche):** `lab-check` marcaba «Object Lock» en nas-a (el bucket estaba bien: faltaban los alias `a`/`b` de `mc`, que se pierden al recrear el contenedor) y `tape` encendido por *Start all*. Arreglos: el `entrypoint` de `acc/nas` crea los alias al arrancar (imagen reconstruida; entra al reabrir el proyecto) y `tareas.sh` apaga `tape` en cuanto termina el cartucho de su arranque.
+
+## Hecho: IDS/IPS Suricata (ver docs/pruebas/F12-ids-ips.md)
+- Suricata (IDS, ET Open) en WAN1/WAN2 de fw-a1, fw-a2 y fw-b + respuesta activa (tabla `ACC_IDS_BLOQUEO`, 1 h) + Zabbix + ticket GLPI. Aplicar: `opn-apply.sh <fw> filter ids` (con el servidor HTTP del host).
+- Gotchas: `template reload OPNsense/IDS` antes de `ids restart`; un único `actions_acc.conf` (el cron cachea las acciones). Tras una prueba de nmap, el atacante queda bloqueado 1 h: `pfctl -t ACC_IDS_BLOQUEO -T flush` en el FW para repetir.
+
+## Hecho: coherencia con las Fases (22/11 noche)
+- Horario 07:00–19:00; archivo, glpi y glpi-db cada 4 h (RPO 4 h) y al arrancar; retención 24 h + 30 diarias + 4 semanales + 12 mensuales; zbx-db en el respaldo diario; advertencias también abren ticket.

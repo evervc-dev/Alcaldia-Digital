@@ -17,5 +17,6 @@ for s in $SVCS; do case $s in
   ssh) RELOAD="$RELOAD configctl openssh restart >/dev/null 2>&1;" ;;
   webgui) RELOAD="$RELOAD configctl webgui restart >/dev/null 2>&1;" ;;
   dpinger) RELOAD="$RELOAD pluginctl -s dpinger restart >/dev/null;" ;;
+  ids) RELOAD="$RELOAD configctl template reload OPNsense/IDS >/dev/null; configctl ids update >/dev/null 2>&1; configctl ids restart >/dev/null 2>&1;" ;;   # Suricata: reglas ET Open + arranque
 esac; done
 bash scripts/fw.sh "$FW" "B=http://192.168.122.1:8088; for f in $S wan-ab.inc.php dhcp.inc.php ipsec.psk ipsec-sedes.psk; do fetch -qo /root/\$f \$B/\$f; done; cd /usr/local/opnsense/mvc && php /root/$S $R | grep -vE '^ok: [a-z-]+( \(|$)'; $RELOAD echo 'servicios recargados: $SVCS'" 2>&1 | grep -v SO_RCVBUF

@@ -21,6 +21,7 @@
 | **Monitoreo y alertas** | Ver el estado de la red y recibir correos cuando algo falla | Zabbix 7 (38 equipos, mapa de red) + correo a mailpit + **ticket automático en GLPI** |
 | **Mesa de servicio** | El personal reporta incidencias; TI las atiende; las caídas abren tickets solas | GLPI 11 en `mesa.evervc.dev`, login único con el AD (perfil según grupo); Zabbix abre y resuelve tickets por la API |
 | **Respaldos** | Copia diaria cifrada, inmutable, en otro sitio y fuera de línea | restic → NAS con Object Lock **COMPLIANCE** → réplica a nas-b → cinta simulada |
+| **Detección y prevención de intrusiones** | Detectar escaneos y ataques desde Internet y cortar al atacante | Suricata (ET Open) en las WAN de los 3 firewalls; la IP atacante se bloquea 1 h; alerta en Zabbix y ticket en GLPI |
 | **Acceso remoto de TI** | Administrar desde casa de forma segura | Cloudflare Zero Trust + **WARP**, solo para los correos autorizados |
 
 ---
@@ -47,6 +48,7 @@
 | Servicio | Dirección |
 |---|---|
 | DNS/Kerberos/LDAP(S) | dc1 `10.10.20.10`, dc2 `10.20.20.10` |
+| IDS de los firewalls | *Servicios → Detección de intrusiones* en la GUI de cada firewall (alertas); IP bloqueadas: `pfctl -t ACC_IDS_BLOQUEO -T show` (desbloquear todo: `-T flush`) |
 | GUI y SSH de los firewalls | Solo desde GESTION/ADMIN: `https://10.10.40.2`, `.3` y `https://10.20.40.1`; SSH **solo con clave** (`scripts/fw.sh`) |
 | Correo de pruebas (alertas) | mailpit `http://10.10.20.32:8025` |
 | Consola de los NAS | nas-a `http://10.10.60.10:9001`, nas-b `10.20.60.10:9001` (grupo `nas-admins` del AD) |
@@ -135,6 +137,7 @@
 | 15 | `bash scripts/tareas.sh ahora cinta` (o encender `tape` a mano) | Enciende `tape`, graba un cartucho con todos los respaldos (`/data/cartuchos/registro.log`) y lo **apaga** solo | ≈ 1 min en total |
 | 16 | *Stop* de `lam` (o de cualquier servidor) y luego *Start* | Zabbix abre un **ticket en GLPI** (`mesa.evervc.dev`, categoría «Infraestructura», asignado a `zabbix`, urgencia según la severidad). Al volver, el ticket pasa a **Resuelto** con la solución automática. En Zabbix, el problema tiene el enlace «Ticket GLPI #N» | ticket ≈ 60 s · cierre < 1 min |
 | 17 | Entrar a `mesa.evervc.dev` con `ana.funcionaria` y con `tecnico.soporte` | Ana ve la vista simple (crear/seguir sus tickets); el técnico ve la vista completa con todos los tickets. Ninguno escribe contraseña en GLPI (SSO) | — |
+| 18 | Desde `atacante-ext`: `nmap -Pn -sS -p 22,1433,1521,3306,5432,5900-5905 203.0.113.4` | Suricata alerta («ET SCAN…»); en < 1 min la IP 198.18.0.66 queda **bloqueada 1 h** en las WAN; Zabbix: «IDS detectó un ataque» (alta) → **ticket en GLPI**. Para repetir antes de la hora: `pfctl -t ACC_IDS_BLOQUEO -T flush` en el firewall | bloqueo ≈ 40 s · ticket ≈ 1 min |
 
 Pruebas automáticas equivalentes: `scripts/test-zones.sh` (50 flujos), `scripts/f10-sonda.sh` (mide cortes) y `scripts/lab-check.sh` (estado general).
 
@@ -173,6 +176,10 @@ Pruebas automáticas equivalentes: `scripts/test-zones.sh` (50 flujos), `scripts
   - nginx-dmz pasa el usuario autenticado (Authelia + horario) en `Remote-User`; Apache en `glpi` **descarta esa cabecera** si no viene de nginx-dmz (nadie de la VLAN puede suplantar).
   - GLPI crea al usuario la primera vez con sus datos del AD (LDAPS a dc1, réplica dc2) y le asigna el perfil por su grupo (reglas).
   - Notificaciones de GLPI por correo a mailpit. Todo se configura con `scripts/glpi-setup.sh` (idempotente).
+- **IDS/IPS:**
+  - Suricata 8 en modo IDS escucha WAN1 y WAN2 de fw-a1, fw-a2 y fw-b (reglas ET Open: scan, dos, exploit, attack_response).
+  - Cada minuto, el vigía `acc-ids-vigia.py` (cron de OPNsense) lee las alertas nuevas y bloquea 1 h la IP de origen en la tabla `ACC_IDS_BLOQUEO`, primera regla de cada WAN. Nunca bloquea redes del laboratorio, las sedes, el otro sitio ni los DNS públicos.
+  - Envía a Zabbix (trapper) el n.º de alertas, la última firma y las IP bloqueadas.
 - **Seguridad perimetral:**
   - No hay puertos abiertos en Internet: todo entra por Cloudflare.
   - Firewall por zonas con mínimo privilegio y registro de bloqueos.
@@ -201,6 +208,7 @@ Pruebas automáticas equivalentes: `scripts/test-zones.sh` (50 flujos), `scripts
   - Escritorios por usuario y puesto unido al dominio.
   - LAM solo por WARP.
 - **Publicación segura:** Cloudflare Tunnel, Zero Trust/WARP y Access para el monitoreo.
+- **IDS/IPS:** Suricata en las WAN con respuesta activa (bloqueo 1 h), alerta y ticket (probado en A y B).
 - **Monitoreo:** Zabbix con alertas por correo, mapa de red y supervisión de túneles, réplica, NAS y respaldos.
 - **Mesa de servicio:** GLPI en `mesa.evervc.dev` con SSO del AD, perfiles por grupo y tickets automáticos desde Zabbix (abrir y resolver, probado).
 - **Respaldos 3-2-1:** WORM COMPLIANCE, réplica a nas-b, cinta y respaldo de configuraciones; resistentes al ransomware (probado).
@@ -222,7 +230,7 @@ Pruebas automáticas equivalentes: `scripts/test-zones.sh` (50 flujos), `scripts
 
 ### ➕ Se puede agregar
 - **GLPI:** inventario automático de equipos (agente GLPI), catálogo de servicios y SLA por categoría; recolector de correo para abrir tickets por email.
-- **Suricata** (IDS/IPS) en los OPNsense.
+- **IPS en línea** (modo *divert* o *netmap* de Suricata, que descarta el paquete en el acto) en lugar de la respuesta activa; inspección de la DMZ.
 - **oxidized** (interfaz web con el historial de configuraciones) en lugar de `backup-configs.sh` + git.
 - **Correo real** (SMTP saliente) para las alertas; alerta de cambios hechos en LAM.
 - **Más disponibilidad en el DR:** Zabbix secundario o *proxy* en el Site B; escritorios de contingencia en B.

@@ -55,6 +55,9 @@ function sede_interfaces($ifs, $side) {
 function wan_ab_rules($rule, $side) {
     // En 26.x las conexiones swanctl NO generan reglas automáticas en WAN: IKE/NAT-T y ESP explícitos
     $wanif = [1 => 'wan', 2 => 'opt1'];
+    foreach ($wanif as $w) {   // IDS: respuesta activa (primeras reglas de cada WAN; las sedes y el otro sitio nunca entran en la tabla)
+        $rule($w, 'block', 'IDS: IP atacante bloqueada (respuesta activa, 1 h)', ['source_net' => 'ACC_IDS_BLOQUEO']);
+    }
     foreach (WAN_AB_TUNNELS as [$reqid, $ifn, $descr, $ao, $bo]) {
         $peer = $side === 'a' ? $bo : $ao;
         $rule($wanif[$reqid], 'pass', "$descr: IKE/NAT-T desde el par", ['protocol' => 'UDP',
@@ -221,6 +224,7 @@ function wan_ab_apply($side, $routerid, $passive) {
     echo "ok: ospf-interfaces (" . (count(WAN_AB_TUNNELS) + count(sede_tunnels($side)) + count($passive)) . ")\n";
 
     if ($side === 'b') { acc_vigia_ipsec(); }
+    acc_ids();
 }
 
 /*
@@ -243,11 +247,7 @@ wait
 SH
     );
     chmod('/usr/local/sbin/acc-vigia-ipsec.sh', 0755);
-    file_put_contents('/usr/local/opnsense/service/conf/actions.d/actions_acc.conf',
-        "[vigia-ipsec]\ncommand:/usr/local/sbin/acc-vigia-ipsec.sh\nparameters:\ntype:script\n" .
-        "message:ACC vigia de tuneles A-B\ndescription:ACC: relanza los tuneles IPsec A-B sin SA\n");
-    exec('/usr/sbin/service configd restart >/dev/null 2>&1');
-    sleep(2);
+    acc_acciones();
     $cron = new \OPNsense\Cron\Cron();
     $job = null;
     foreach ($cron->jobs->job->iterateItems() as $j) { if ((string)$j->command === 'acc vigia-ipsec') { $job = $j; } }
@@ -257,4 +257,107 @@ SH
     save_model($cron, 'cron-vigia-ipsec');
     Config::getInstance()->save();
     exec('/usr/local/sbin/configctl cron restart >/dev/null 2>&1');
+}
+
+
+/*
+ * IDS/IPS (Fase 1 alcance, RQ-09): Suricata en modo IDS (pcap) en las dos WAN, reglas ET Open de escaneo, DoS, exploits y
+ * respuestas de ataque. "Prevención" por respuesta activa: el vigía (cron cada minuto) lee las alertas nuevas de eve.json,
+ * añade la IP de origen a la tabla ACC_IDS_BLOQUEO (bloqueada en las WAN, caduca a la hora) si no es de confianza
+ * (redes del laboratorio, sedes, el otro sitio, DNS públicos) y envía a Zabbix (trapper) el n.º de alertas y la última firma.
+ */
+function acc_ids() {
+    $ids = new \OPNsense\IDS\IDS();
+    $g = $ids->general;
+    $g->enabled = '1'; $g->mode = 'pcap'; $g->promisc = '0'; $g->interfaces = 'wan,opt1';
+    $g->homenet = '10.0.0.0/8,172.16.0.0/12,192.168.0.0/16,100.64.0.0/10,203.0.113.0/24,198.51.100.0/24,192.0.2.0/24';
+    $g->detect->Profile = 'low';   // memoria: los FW del laboratorio tienen 1–1.5 GB
+    $want = ['emerging-scan.rules', 'emerging-dos.rules', 'emerging-exploit.rules', 'emerging-attack_response.rules'];
+    $have = [];
+    foreach ($ids->files->file->iterateItems() as $fl) { $have[(string)$fl->filename] = $fl; }
+    foreach ($want as $fn) { $n = $have[$fn] ?? $ids->files->file->Add(); $n->filename = $fn; $n->enabled = '1'; }
+    save_model($ids, 'ids');
+    Config::getInstance()->save();
+
+    file_put_contents('/usr/local/sbin/acc-ids-vigia.py', <<<'PYS'
+#!/usr/local/bin/python3
+# ACC: respuesta activa del IDS (Suricata) + aviso a Zabbix. Lo lanza el cron de OPNsense cada minuto (configd: acc ids-vigia).
+import ipaddress, json, os, socket, struct, subprocess
+EVE, POS, TABLA = "/var/log/suricata/eve.json", "/var/db/acc-ids.pos", "ACC_IDS_BLOQUEO"
+HOST = socket.gethostname().split(".")[0]
+CONFIANZA = [ipaddress.ip_network(n) for n in ("10.0.0.0/8", "172.16.0.0/12", "192.168.0.0/16", "100.64.0.0/10", "203.0.113.0/24",
+             "198.51.100.0/24", "192.0.2.0/24", "1.1.1.1/32", "1.0.0.1/32", "8.8.8.8/32", "8.8.4.4/32")]
+def confianza(ip):
+    try: a = ipaddress.ip_address(ip)
+    except ValueError: return True
+    return any(a in n for n in CONFIANZA)
+def zabbix(datos):
+    body = json.dumps({"request": "sender data", "data": [{"host": HOST, "key": k, "value": str(v)} for k, v in datos.items()]}).encode()
+    try:
+        with socket.create_connection(("10.10.20.30", 10051), timeout=5) as s:
+            s.sendall(b"ZBXD\x01" + struct.pack("<II", len(body), 0) + body); s.recv(1024)
+    except OSError: pass
+size = os.path.getsize(EVE) if os.path.exists(EVE) else 0
+try: pos = int(open(POS).read())
+except (OSError, ValueError): pos = size          # primera vez: solo lo nuevo
+if pos > size: pos = 0                            # rotación del registro
+n, ultima, bloquear = 0, "", set()
+if size > pos:
+    with open(EVE, "rb") as f:
+        f.seek(pos)
+        for linea in f:
+            try: e = json.loads(linea)
+            except ValueError: continue
+            if e.get("event_type") != "alert": continue
+            n += 1; src = e.get("src_ip", ""); sig = e.get("alert", {}).get("signature", "?")
+            ultima = f"{sig} (origen {src} -> {e.get('dest_ip', '')}:{e.get('dest_port', '')})"
+            if not confianza(src): bloquear.add(src)
+        pos = f.tell()
+open(POS, "w").write(str(pos))
+for ip in sorted(bloquear):
+    if subprocess.run(["/sbin/pfctl", "-t", TABLA, "-T", "add", ip], capture_output=True).returncode == 0:
+        subprocess.run(["/usr/bin/logger", "-t", "acc-ids", f"IP {ip} bloqueada 1 h en las WAN (respuesta activa del IDS)"])
+subprocess.run(["/sbin/pfctl", "-t", TABLA, "-T", "expire", "3600"], capture_output=True)
+r = subprocess.run(["/sbin/pfctl", "-t", TABLA, "-T", "show"], capture_output=True, text=True)
+datos = {"ids.alertas": n, "ids.bloqueadas": len(r.stdout.split()) if r.returncode == 0 else 0}
+if ultima: datos["ids.ultima"] = ultima[:250]
+zabbix(datos)
+PYS
+    );
+    chmod('/usr/local/sbin/acc-ids-vigia.py', 0755);
+    acc_acciones();
+    $cron = new \OPNsense\Cron\Cron();
+    $job = null;
+    foreach ($cron->jobs->job->iterateItems() as $j) { if ((string)$j->command === 'acc ids-vigia') { $job = $j; } }
+    if (!$job) { $job = $cron->jobs->job->Add(); }
+    $job->setNodes(['enabled' => '1', 'minutes' => '*', 'hours' => '*', 'days' => '*', 'months' => '*', 'weekdays' => '*',
+        'who' => 'root', 'command' => 'acc ids-vigia', 'parameters' => '', 'description' => 'ACC: vigía del IDS (respuesta activa)']);
+    save_model($cron, 'cron-ids-vigia');
+    Config::getInstance()->save();
+    exec('/usr/local/sbin/configctl cron restart >/dev/null 2>&1');
+}
+
+/* configd tarda unos segundos en volver a cargar sus acciones: el cron solo acepta comandos que ya lista */
+function acc_esperar_accion($accion) {
+    for ($i = 0; $i < 30; $i++) {
+        $out = []; exec('/usr/local/sbin/configctl configd actions 2>/dev/null', $out);
+        foreach ($out as $l) { if (strpos($l, $accion . ' ') === 0) { return; } }
+        sleep(1);
+    }
+    fwrite(STDERR, "aviso: configd no lista '$accion'\n");
+}
+
+/* Acciones configd del laboratorio ("acc ..."): UN archivo con todas, escrito antes de crear el modelo del cron
+ * (el modelo guarda en caché la lista de comandos durante toda la ejecución de PHP). */
+function acc_acciones() {
+    $txt = "[vigia-ipsec]\ncommand:/usr/local/sbin/acc-vigia-ipsec.sh\nparameters:\ntype:script\n" .
+           "message:ACC vigia de tuneles A-B\ndescription:ACC: relanza los tuneles IPsec A-B sin SA\n\n" .
+           "[ids-vigia]\ncommand:/usr/local/sbin/acc-ids-vigia.py\nparameters:\ntype:script\n" .
+           "message:ACC vigia del IDS\ndescription:ACC: respuesta activa del IDS y aviso a Zabbix\n";
+    $f = '/usr/local/opnsense/service/conf/actions.d/actions_acc.conf';
+    if (@file_get_contents($f) !== $txt) {
+        file_put_contents($f, $txt);
+        exec('/usr/sbin/service configd restart >/dev/null 2>&1');
+    }
+    acc_esperar_accion('acc vigia-ipsec'); acc_esperar_accion('acc ids-vigia');
 }

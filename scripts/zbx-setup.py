@@ -247,6 +247,21 @@ for eq, lim in (("ts1", 26), ("archivo", 5), ("portal-db", 26), ("dc1", 26), ("g
     trigger(hid, f"{eq}: no se puede comprobar el respaldo", f"nodata(/{eq}/{key},2h)=1", SEV["average"],
             "Zabbix no puede leer el repositorio restic en nas-a.")
 
+# ---------- IDS/IPS (Suricata en las WAN de los OPNsense; vigía acc-ids-vigia.py cada minuto, trapper) ----------
+for fw in ("fw-a1", "fw-a2", "fw-b"):
+    hid = HOSTS[fw]
+    item(hid, None, "IDS: alertas en el último minuto", "ids.alertas", type=2, delay="0", value_type=3)
+    item(hid, None, "IDS: IP bloqueadas por respuesta activa", "ids.bloqueadas", type=2, delay="0", value_type=3)
+    item(hid, None, "IDS: última alerta", "ids.ultima", type=2, delay="0", value_type=4)
+    trigger(hid, f"{fw}: IDS detectó un ataque desde Internet (IP bloqueada 1 h)",
+            f"max(/{fw}/ids.alertas,10m)>0 and length(last(/{fw}/ids.ultima))>0", SEV["high"],
+            "Suricata (ET Open) alertó en una WAN; el vigía bloqueó la IP de origen 1 h (tabla ACC_IDS_BLOQUEO). "
+            "Ver la alerta en Servicios > Detección de intrusiones del firewall.")
+    t = api("trigger.get", {"hostids": hid, "filter": {"description": f"{fw}: IDS detectó un ataque desde Internet (IP bloqueada 1 h)"}, "output": ["triggerid"]})
+    if t: api("trigger.update", {"triggerid": t[0]["triggerid"], "opdata": "{ITEM.LASTVALUE2}"})
+    trigger(hid, f"{fw}: el vigía del IDS no informa", f"nodata(/{fw}/ids.alertas,10m)=1", SEV["warning"],
+            "El cron 'acc ids-vigia' del firewall no envía datos (¿Suricata o el cron detenidos?).")
+
 # ---------- Tareas programadas (scripts/tareas.sh en el host, systemd --user cada hora) ----------
 # Trapper: el script envía 1 (OK) o 0 (fallo) con zabbix_sender. Sin dato en el plazo -> la tarea no se ejecuta.
 hid, _ = host("tareas-programadas", None, "Site A",

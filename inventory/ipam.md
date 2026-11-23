@@ -84,7 +84,7 @@ OSPF área 0 sobre VTI: costo 10 (A por WAN1), 20 (A por WAN2), 100 (B). Las sed
 | GESTION | SNMP/agent | ✓ | — | ✗ | SNMP | NTP/updates |
 | SERVIDORES | — | ✗ | syslog/SNMP traps | ✗ | ✗ | updates |
 
-Todo bloqueo queda registrado (log en OPNsense → syslog → Zabbix). Suricata en modo IPS en WAN y DMZ.
+Todo bloqueo queda registrado (log en OPNsense → syslog → Zabbix). Suricata (IDS, reglas ET Open) en WAN1 y WAN2 de los tres firewalls + respuesta activa: la IP atacante se bloquea 1 h en las WAN (tabla `ACC_IDS_BLOQUEO`); alerta en Zabbix y ticket en GLPI. La DMZ no se inspecciona (solo recibe la conexión saliente del túnel de Cloudflare).
 
 
 ### Altas de F5 (fuente: este archivo)

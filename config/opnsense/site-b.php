@@ -118,6 +118,10 @@ foreach ($want as $name => $content) {
     $al->aliases->alias->Add()->setNodes(['enabled' => '1', 'name' => $name, 'type' => 'port',
         'content' => $content, 'description' => 'ACC Site B']);
 }
+/* IDS (Suricata): tabla de IPs atacantes que el vigía del IDS llena (respuesta activa, 1 h) -> bloqueada en las WAN */
+foreach ($al->aliases->alias->iterateItems() as $uuid => $a) { if ((string)$a->name === 'ACC_IDS_BLOQUEO') { $al->aliases->alias->del($uuid); } }
+$al->aliases->alias->Add()->setNodes(['enabled' => '1', 'name' => 'ACC_IDS_BLOQUEO', 'type' => 'external', 'content' => '',
+    'description' => 'ACC: IP atacantes detectadas por el IDS (respuesta activa, 1 h)']);
 save_model($al, 'alias');
 Config::getInstance()->save();
 
