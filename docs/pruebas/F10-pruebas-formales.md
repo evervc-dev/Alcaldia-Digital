@@ -29,3 +29,17 @@ Medición de extremo a extremo con `scripts/f10-sonda.sh` (cada 0,5 s): **portal
 - pf no filtra el tráfico de una VTI hacia el propio firewall: mitigado en el kit de la sede y endureciendo SSH/GUI; un kit comprometido podría intentar alcanzar los servicios del firewall (solo SSH con clave).
 - Las SA IPsec no se replican entre fw-a1 y fw-a2: perder el maestro cuesta ~23 s a las sedes.
 - En DR no hay escritorios (ts1), LAM ni Zabbix (servicios internos del Site A).
+
+## Pruebas añadidas (22/11/2026 noche): capacidad y restauración de configuración
+
+| # | Prueba | Resultado | Criterio | Requisito |
+|---|---|---|---|---|
+| T10 | **Carga del portal** desde Internet (Cloudflare → túnel → DMZ → portal → BD), `scripts/prueba-carga.py` | ✅ **Estrés**: 133 usuarios sin pausa, 60 s → 10 119 peticiones, **100 % OK**, 157 pet/s, p50 480 ms, p95 5,2 s (portal al 85 % de CPU: 1 proceso uvicorn). **Realista** (escenario de 190 sedes): 267 sesiones, una página cada ~10 s (3 veces lo que supone la Fase 3), 120 s → 3 435 peticiones, **100 % OK**, p50 168 ms, **p95 184 ms** | 133 sesiones simultáneas + margen | RQ-12 |
+| T11 | **Restaurar una configuración**: cambio erróneo en fw-b (se borran sus 56 reglas: Site B inalcanzable y SSH por ADMIN bloqueado) → `scripts/restaurar-config.sh fw-b` | ✅ copia de `respaldos/configuraciones` (nas-a, WORM) aplicada **fuera de banda por la VLAN GESTION** (la regla anti-bloqueo de OPNsense): restauración en **14 s**, servicio de vuelta a los **19 s** del cambio; 304 reglas, IPsec/OSPF e IDS de nuevo en marcha; `lab-check` todo OK | Restauración de una configuración | RQ-11 |
+
+Equivalencia de T10 con la Fase 3: una sesión pide una página cada 30 s, así que 157 pet/s sostenidas equivalen a unas 4 700 sesiones simultáneas, 35 veces el requisito del año 5.
+
+Problemas encontrados en T11 y arreglos:
+- La configuración en base64 (225 KB) no cabe como argumento: `fw.sh <fw> -` lee el script por la entrada estándar.
+- Con las reglas rotas no hay SSH por ADMIN: `fw.sh` con `GESTION=1` salta por `nc` en el switch del sitio hasta la IP de GESTION del firewall. `restaurar-config.sh` lo usa solo si ADMIN no responde.
+- `rc.reload_all` tarda varios minutos (el primer intento superó los 400 s): se recargan solo filtro, IPsec, OSPF e IDS.

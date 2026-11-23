@@ -145,6 +145,8 @@
 | 21 | `python3 scripts/sensores.py a corte` (y luego `a normal`) | Zabbix: «UPS A/B en baterías» (**P1**, ticket) → a los ~20 s arranca el generador: «en baterías» se resuelve y queda «alimentado por el generador» (P3) | P1 → resuelto en < 1 min |
 | 22 | `python3 scripts/sensores.py b generador-falla` (y luego `b normal`) | «Generador: falla de arranque» (P2) + «UPS B1 en baterías» (P1); la autonomía baja de 7,9 min y a < 2 min salta **«aplicar P-E»** (desastre). Es el disparador del procedimiento P-E / prueba 14 | ≈ 6 min hasta P-E |
 | 23 | `python3 scripts/sensores.py a calor` / `a humedad` / `a sobrecarga` | > 27 °C → P2 (en ~4 min) · 85 % HR → P3 · 4,6 kW + UPS B fuera de servicio → UPS A > 80 % (P2) y aviso de capacidad | — |
+| 24 | `python3 scripts/prueba-carga.py 133 60` (estrés) o `python3 scripts/prueba-carga.py 267 120 10` (realista) | 100 % de respuestas correctas; realista p95 ≈ 0,2 s. Borrar después: `delete from tramites where nombre='PRUEBA DE CARGA'` en portal-db | 157 pet/s (estrés) |
+| 25 | Romper fw-b (p. ej. borrar reglas en su GUI) y `bash scripts/restaurar-config.sh fw-b` | Restaura el `config.xml` de la última copia del NAS (WORM); si SSH por ADMIN no responde, entra por la VLAN GESTION. El Site B vuelve | ≈ 15–20 s |
 
 Pruebas automáticas equivalentes: `scripts/test-zones.sh` (50 flujos), `scripts/f10-sonda.sh` (mide cortes) y `scripts/lab-check.sh` (estado general).
 
