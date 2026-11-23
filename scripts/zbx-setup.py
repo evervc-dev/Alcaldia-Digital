@@ -232,13 +232,18 @@ for t in api("trigger.get", {"hostids": [HOSTS[f"kit-sede-{N:02d}"] for N in (1,
 # el JSON se convierte en segundos con JavaScript. Diario a las 02:00 -> alerta si pasan más de 26 h.
 JS_EDAD = ("var s = JSON.parse(value); if (!s.length) { return 999999999; }"
            " var t = s[0].time.replace(/\\.\\d+/, ''); return Math.floor(Date.now() / 1000 - Date.parse(t) / 1000);")
-for eq in ("ts1", "archivo", "portal-db", "dc1", "glpi-db", "glpi"):
+# RPO (Fase 2): archivo y mesa de servicio 4 h -> respaldo cada 4 h, alerta a las 5 h; el resto diario, alerta a las 26 h
+for eq, lim in (("ts1", 26), ("archivo", 5), ("portal-db", 26), ("dc1", 26), ("glpi-db", 5), ("glpi", 5), ("zbx-db", 26)):
     hid = HOSTS[eq]
     key = f'restic-ultimo.sh["{eq}"]'
     item(hid, None, "Respaldo: antigüedad del último (restic)", key, type=10, delay="15m", units="s", timeout="60s",
          preprocessing=[{"type": 21, "params": JS_EDAD, "error_handler": 0, "error_handler_params": ""}])
-    trigger(hid, f"{eq}: sin respaldo en más de 26 h", f"last(/{eq}/{key})>93600", SEV["high"],
-            "El respaldo diario (02:00) no se ha completado. Ver /var/log/respaldo.log en el equipo.")
+    desc = f"{eq}: sin respaldo en más de {lim} h"
+    for t in api("trigger.get", {"hostids": hid, "search": {"description": "sin respaldo en más de"}, "output": ["triggerid", "description"]}):
+        if t["description"] != desc: api("trigger.delete", [t["triggerid"]])   # umbral anterior
+    trigger(hid, desc, f"last(/{eq}/{key})>{lim * 3600}", SEV["high"],
+            ("Respaldo cada 4 h (RPO 4 h de la Fase 2)" if lim < 24 else "El respaldo diario (02:00)") +
+            " no se ha completado. Ver /var/log/respaldo.log en el equipo.")
     trigger(hid, f"{eq}: no se puede comprobar el respaldo", f"nodata(/{eq}/{key},2h)=1", SEV["average"],
             "Zabbix no puede leer el repositorio restic en nas-a.")
 
@@ -334,7 +339,7 @@ mt_glpi = (api("mediatype.update", {"mediatypeid": g[0]["mediatypeid"], **MT_GLP
 uid = api("user.get", {"filter": {"username": "Admin"}, "output": ["userid"]})[0]["userid"]
 api("user.update", {"userid": uid, "medias": [
     {"mediatypeid": mt, "sendto": ["ti@alcaldia.lab"], "active": 0, "severity": 60, "period": "1-7,00:00-24:00"},   # 60 = advertencia y superiores
-    {"mediatypeid": mt_glpi, "sendto": ["mesa"], "active": 0, "severity": 56, "period": "1-7,00:00-24:00"}]})       # 56 = media y superiores -> ticket
+    {"mediatypeid": mt_glpi, "sendto": ["mesa"], "active": 0, "severity": 60, "period": "1-7,00:00-24:00"}]})       # 60 = advertencia y superiores -> ticket (Tabla 13: también P3)
 for a in api("action.get", {"filter": {"name": "Report problems to Zabbix administrators"}, "output": ["actionid"]}):
     api("action.update", {"actionid": a["actionid"], "status": 0})
 # Host "Zabbix server": se conserva la salud interna del servidor; sin agente en el contenedor -> fuera la plantilla de agente

@@ -126,7 +126,7 @@
 | 6 | *Stop* de `dc1` | Los usuarios siguen entrando: Authelia, ts1 y las sedes usan **dc2**. Zabbix alerta | sin corte para el usuario |
 | 7 | *Suspend* del cable `kit-sede-02` ↔ `isp2` (WAN de la sede) | Zabbix: túneles WAN1/WAN2 caídos y «Sede 2 AISLADA» (Disaster). Al volver, el kit reconecta solo | alerta ≈ 1 min · reconexión ≈ 10 s |
 | 8 | *Stop* de `fw-a1` **y** `fw-a2` (el Site A sin firewalls) | Las sedes siguen funcionando por el **túnel al Site B** con dc2. El portal cae hasta activar el DR (prueba 14). Al volver, los túneles a A se restablecen solos | sedes ≈ 7 s |
-| 9 | Login en `archivo.evervc.dev` con `ana.funcionaria` fuera de horario (fines de semana, o lunes a viernes fuera de 08:00–16:00) | Página explicando el motivo del rechazo | — |
+| 9 | Login en `archivo.evervc.dev` con `ana.funcionaria` fuera de horario (fines de semana, o lunes a viernes fuera de 07:00–19:00) | Página explicando el motivo del rechazo | — |
 | 10 | Login en `puesto-01` (consola VNC) con `ana.funcionaria` fuera de horario | Ventana con el motivo y cierre de sesión; con `tecnico.soporte` (`acceso-24h`) entra | — |
 | 11 | 4 contraseñas falsas seguidas en `auth.evervc.dev` | Bloqueo de 5 min, incluso con la contraseña correcta | — |
 | 12 | Desde `pc-01-a`: `nc -z -w3 10.100.2.1 53` o `nc -z -w3 10.10.40.2 443` | Bloqueado: ni otras sedes ni la gestión del CD son alcanzables | — |
@@ -145,7 +145,7 @@ Pruebas automáticas equivalentes: `scripts/test-zones.sh` (50 flujos), `scripts
 - **Login y horario web:**
   1. nginx-dmz pregunta a `gate` (`auth_request`) en cada petición protegida.
   2. `gate` consulta a Authelia si hay sesión con MFA.
-  3. Lee los grupos del AD y aplica `config/politicas/horario.conf`: `funcionarios` de lunes a viernes de 08:00 a 16:00; `acceso-24h` siempre.
+  3. Lee los grupos del AD y aplica `config/politicas/horario.conf`: `funcionarios` de lunes a viernes de 07:00 a 19:00 (horario de S1, S3 y S5 en las Fases 2 y 4); `acceso-24h` siempre.
   4. Fuera de horario devuelve una página con el motivo; en ts1 y en los puestos lo hace `horario.sh` con una ventana.
 - **Portal:**
   - FastAPI genera un folio (`AAAAMMDD-XXXXXX`) y lo guarda en `portal-db`.

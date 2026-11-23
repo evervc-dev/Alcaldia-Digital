@@ -46,13 +46,13 @@ print("; ".join(p["name"] for p in a("problem.get",{"output":["name"],"severitie
 [ -z "$PROB" ] && ok "Zabbix: sin problemas de severidad media o superior" || ko "Zabbix reporta: $PROB"
 
 echo "== Respaldos (F9)"
-for eq in ts1 archivo portal-db dc1 glpi-db glpi; do
+for e in ts1:26 archivo:5 portal-db:26 dc1:26 glpi-db:5 glpi:5 zbx-db:26; do eq=${e%:*}; LIM=${e#*:}   # RPO 4 h -> < 5 h
   EDAD=$(docker exec GNS3.zbx-server.$P /etc/acc/restic-ultimo.sh $eq 2>/dev/null | python3 -c '
 import json,sys,re,datetime as d
 try:
     s=json.load(sys.stdin); t=d.datetime.fromisoformat(re.sub(r"\.\d+","",s[0]["time"]).replace("Z","+00:00")); print(int((d.datetime.now(d.timezone.utc)-t).total_seconds()/3600))
 except Exception: print("?")')
-  [ "$EDAD" != "?" ] && [ "$EDAD" -lt 26 ] && ok "$eq: último respaldo hace ${EDAD} h (WORM, replicado a nas-b)" || ko "$eq: último respaldo hace ${EDAD} h (esperado < 26 h)"
+  [ "$EDAD" != "?" ] && [ "$EDAD" -lt "$LIM" ] && ok "$eq: último respaldo hace ${EDAD} h (WORM, replicado a nas-b)" || ko "$eq: último respaldo hace ${EDAD} h (esperado < $LIM h)"
 done
 chk "nas-a: Object Lock COMPLIANCE en respaldos" "docker exec GNS3.nas-a.$P sh -c 'mc retention info --default a/respaldos 2>/dev/null | grep -q COMPLIANCE'"
 

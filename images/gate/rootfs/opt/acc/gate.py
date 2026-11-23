@@ -21,7 +21,7 @@ TZ_LOCAL = datetime.timezone(datetime.timedelta(hours=-6))   # El Salvador, sin 
 
 def politica():
     p = {"GRUPO_RESTRINGIDO": "funcionarios", "GRUPO_EXENTO": "acceso-24h", "DIAS": "1,2,3,4,5",
-         "DESDE": "08:00", "HASTA": "16:00", "TZ_OFFSET": "-6"}
+         "DESDE": "07:00", "HASTA": "19:00", "TZ_OFFSET": "-6"}
     if os.path.exists("/etc/acc/horario.conf"):
         for line in open("/etc/acc/horario.conf"):
             line = line.split("#")[0].strip()

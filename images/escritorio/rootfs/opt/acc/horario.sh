@@ -2,8 +2,8 @@
 # Política de horario laboral en el escritorio (ts1). Se ejecuta al iniciar la sesión (startwm.sh).
 # Fuente: /etc/acc/horario.conf (config/politicas/horario.conf). Pertenencia a grupos: AD vía winbind.
 # Sale 0 si puede continuar; si no, muestra el motivo, registra y sale 1 (startwm.sh cierra la sesión).
-GRUPO_RESTRINGIDO=funcionarios; GRUPO_EXENTO=acceso-24h; DIAS=1,2,3,4,5; DESDE=08:00; HASTA=16:00; TZ_OFFSET=-6
-[ -f /etc/acc/horario.conf ] && . <(sed 's/#.*//' /etc/acc/horario.conf)
+GRUPO_RESTRINGIDO=funcionarios; GRUPO_EXENTO=acceso-24h; DIAS=1,2,3,4,5; DESDE=07:00; HASTA=19:00; TZ_OFFSET=-6
+for f in /etc/acc/horario.conf /var/lib/samba/acc/horario.conf; do [ -f "$f" ] && . <(sed 's/#.*//' "$f"); done   # /var/lib/samba: volumen persistente
 U=$(id -un); G=" $(id -nG "$U" 2>/dev/null | tr 'A-Z' 'a-z') "
 log() { echo "$(date -Is) user=$U $1" >> /var/log/acc-horario.log; }
 case "$G" in *" ${GRUPO_EXENTO,,} "*) log "permitido (exento: $GRUPO_EXENTO)"; exit 0 ;; esac

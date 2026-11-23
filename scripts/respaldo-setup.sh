@@ -13,11 +13,12 @@ REPO_A="s3:http://10.10.60.10:9000/respaldos/repo"
 # equipo  directorio-persistente  TIPO  RUTAS  HORA_UTC  extra
 EQUIPOS=(
   "ts1|/var/lib/samba/acc|rutas|/home|08|"
-  "archivo|/config/acc|rutas|/srv /database|08|"
+  "archivo|/config/acc|rutas|/srv /database|08|CADA_H=4"
   "portal-db|/etc/acc|pgdump||08|. /etc/acc/pg.env"
   "dc1|/var/lib/samba/acc|samba||08|"
-  "glpi-db|/etc/acc|mysqldump||08|. /etc/acc/db.env"
-  "glpi|/etc/acc|rutas|/var/glpi|08|EXCLUIR='--exclude /var/glpi/files/_cache --exclude /var/glpi/files/_sessions --exclude /var/glpi/files/_tmp'"
+  "zbx-db|/etc/acc|pgdump||08|. /etc/acc/pg.env"
+  "glpi-db|/etc/acc|mysqldump||08|CADA_H=4; . /etc/acc/db.env"
+  "glpi|/etc/acc|rutas|/var/glpi|08|CADA_H=4; EXCLUIR='--exclude /var/glpi/files/_cache --exclude /var/glpi/files/_sessions --exclude /var/glpi/files/_tmp'"
   "nas-a|/data/.acc|mantenimiento||10|"
 )
 for e in "${EQUIPOS[@]}"; do
@@ -37,7 +38,8 @@ for e in "${EQUIPOS[@]}"; do
   # (re)arrancar el bucle diario ([r] evita que pkill se encuentre a sí mismo)
   docker exec "$(C $n)" sh -c "pkill -f '[r]espaldo.sh bucle' 2>/dev/null; true"
   docker exec -d "$(C $n)" "$dir/respaldo.sh" bucle
-  echo "$n: respaldo diario instalado ($tipo, $(printf '%02d' $((10#$hora - 6))):00 hora local)"
+  case "$extra" in *CADA_H=*) echo "$n: respaldo cada ${extra#*CADA_H=} h instalado ($tipo)" | sed 's/;.* h/ h/' ;;
+    *) echo "$n: respaldo diario instalado ($tipo, $(printf '%02d' $((10#$hora - 6))):00 hora local)" ;; esac
 done
 
 # Zabbix: comprueba la antigüedad del último respaldo de cada equipo (credenciales de solo lectura)
@@ -56,7 +58,7 @@ echo "zbx-server: comprobación de respaldos instalada (solo lectura)"
 
 if [ "${1:-}" = ahora ]; then
   echo "== primer respaldo"
-  for n in ts1 archivo portal-db dc1 glpi-db glpi; do
+  for n in ts1 archivo portal-db dc1 glpi-db glpi zbx-db; do
     dir=$(printf '%s\n' "${EQUIPOS[@]}" | awk -F'|' -v n=$n '$1==n{print $2}')
     printf "%s: " "$n"; docker exec "$(C $n)" "$dir/respaldo.sh" ahora | sed 's/^[^ ]* //'
   done
