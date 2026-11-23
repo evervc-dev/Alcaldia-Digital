@@ -37,7 +37,8 @@ ejecutar() {
 case "${1:-ahora}" in
   ahora) ejecutar; tail -1 $LOG ;;
   bucle)
-    [ -n "${CADA_H:-}" ] && { sleep 300; ejecutar; }   # RPO corto: al arrancar no esperar al siguiente tramo
+    HORA_UTC=${HORA_UTC:-8}; HORA_UTC=${HORA_UTC#0}   # "08" es octal inválido en $(( )): el bucle diario moría al arrancar
+    sleep 300; ejecutar   # al arrancar: el lab suele estar apagado a las 02:00
     while true; do
       now=$(date +%s)
       if [ -n "${CADA_H:-}" ]; then P=$(( CADA_H * 3600 )); next=$(( now / P * P + P ))   # cada CADA_H horas en punto (UTC)

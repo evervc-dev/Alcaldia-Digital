@@ -43,3 +43,7 @@ Instalación: `nas-setup.sh` (bucket, cuentas, repo) → `respaldo-setup.sh [aho
 - Con LDAP activo MinIO no admite usuarios internos → cuentas de servicio.
 - El restic de Alpine no es estático (no funciona en Debian) → binario oficial `restic/restic:0.17.3`.
 - `MINIO_ROOT_PASS` se mostró en una traza de depuración → **rotada**.
+
+## Corrección (23/11/2026): los respaldos «diarios» no se ejecutaban solos
+`HORA_UTC='08'` es un octal inválido en `$(( ))`: el bucle de ts1, portal-db, dc1 y zbx-db moría al arrancar, y `archivo` (imagen original) no tenía bucle tras un reinicio. **Todas las copias anteriores de esos equipos se lanzaron a mano.**
+Arreglo: se quita el cero, se respalda a los 5 min de arrancar y `tareas.sh` reinstala los bucles que falten. Verificado: 7 instantáneas automáticas a las 14:13 UTC. La ejecución de las 02:00 todavía no se ha observado.

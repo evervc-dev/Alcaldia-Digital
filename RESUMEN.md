@@ -118,17 +118,19 @@ En el Site B, `nginx-dmz-b` solo entra en juego en un DR (portal, archivo y auth
 | Internet | IKE/ESP desde las sedes y el otro sitio; la web entra por Cloudflare | Todo lo demás |
 | DMZ | SERVIDORES: 80, 443, 8000, 8080, 9091, 9200 y DNS (también a B); Internet; `cloudflared-a` → `ts1` RDP | LDAP, bases de datos, NAS, ADMIN, GESTION |
 | SERVIDORES | Internet, el otro sitio y GESTION; `zbx-server` → todo; NAS en 9000 | DMZ, ADMIN, consola del NAS |
-| USUARIOS | SERVIDORES: 53, 80 y 443; AD (dc1/dc2); `ts1` RDP; Internet | Bases de datos, NAS, ADMIN, GESTION |
+| USUARIOS | DNS y AD (dc1/dc2); `ts1` RDP; Internet | Portal, archivo, GLPI y LAM directos (se usan por la URL pública, con MFA); bases de datos, NAS, ADMIN, GESTION |
 | Sedes | AD (dc1/dc2), DNS y RDP, ping a SERVIDORES; Internet por su ISP | Portal interno, NAS, ADMIN, GESTION, DMZ, otras sedes |
 | RESPALDO | AD, Internet y el otro sitio | Resto |
 | GESTION | Todo menos ADMIN | ADMIN |
 | ADMIN | Todo | — |
 | WARP (TI) | `lam.evervc.dev` y RDP a `ts1` | El resto de `10.x` (política de Gateway) |
 
+### Identidad entre la DMZ y los servicios
+`portal`, `archivo` y GLPI confían en el usuario que les pasa nginx-dmz, y **solo** en él (cerrado el 23/11): el portal exige un secreto compartido, el archivo lee el usuario de una cabecera de nombre secreto y GLPI comprueba la IP. Sin el secreto, nadie entra (falla cerrado). `test-zones.sh` prueba 55 flujos y dos intentos de suplantación desde `ts1`.
+
 ### Puntos débiles conocidos de la segmentación
-- La DMZ y USUARIOS alcanzan esos puertos en **toda** la VLAN SERVIDORES, no servidor por servidor. Por eso un puesto de USUARIOS puede abrir `archivo:80`, `glpi:80` o `lam:80` sin pasar por la DMZ.
-- Los servidores comparten VLAN, incluido `ts1` (donde trabajan usuarios): entre ellos no filtra el firewall.
-- `test-zones.sh` (50 flujos) no cubre estos dos casos.
+- La DMZ alcanza los puertos publicados en **toda** la VLAN SERVIDORES, no servidor por servidor.
+- Los servidores comparten VLAN, incluido `ts1`: entre ellos no filtra el firewall. Desde `ts1` se ven las páginas de login de LAM, GLPI y Zabbix y la web de mailpit, sin pasar por el MFA.
 
 ---
 
@@ -222,7 +224,7 @@ En el Site B, `nginx-dmz-b` solo entra en juego en un DR (portal, archivo y auth
 | 24 | `python3 scripts/prueba-carga.py 133 60` (estrés) o `python3 scripts/prueba-carga.py 267 120 10` (realista) | 100 % de respuestas correctas; realista p95 ≈ 0,2 s. Borrar después: `delete from tramites where nombre='PRUEBA DE CARGA'` en portal-db | 157 pet/s (estrés) |
 | 25 | Romper fw-b (p. ej. borrar reglas en su GUI) y `bash scripts/restaurar-config.sh fw-b` | Restaura el `config.xml` de la última copia del NAS (WORM); si SSH por ADMIN no responde, entra por la VLAN GESTION. El Site B vuelve | ≈ 15–20 s |
 
-Pruebas automáticas equivalentes: `scripts/test-zones.sh` (50 flujos), `scripts/f10-sonda.sh` (mide cortes) y `scripts/lab-check.sh` (estado general).
+Pruebas automáticas equivalentes: `scripts/test-zones.sh` (55 flujos + suplantación), `scripts/f10-sonda.sh` (mide cortes) y `scripts/lab-check.sh` (estado general).
 
 ---
 
@@ -248,7 +250,7 @@ Pruebas automáticas equivalentes: `scripts/test-zones.sh` (50 flujos), `scripts
   - En un DR se marca `DR-ACTIVO` para que no la pise, y Cloudflare pasa a apuntar al túnel B.
   - El AD replica en continuo (DRS).
 - **Respaldos:**
-  - restic cifra y deduplica. **Cada 4 h** (RPO de la Fase 2) y a los 5 min de arrancar: archivo, MariaDB de GLPI y `/var/glpi` (llave de cifrado y adjuntos). **Cada noche a las 02:00**: homes de ts1, BD del portal, AD y BD de Zabbix.
+  - restic cifra y deduplica. **Cada 4 h** (RPO de la Fase 2) y a los 5 min de arrancar: archivo, MariaDB de GLPI y `/var/glpi` (llave de cifrado y adjuntos). **Cada noche a las 02:00 y al arrancar**: homes de ts1, BD del portal, AD y BD de Zabbix.
   - Retención: 24 h completas + 30 diarias + 4 semanales + 12 mensuales.
   - Destino: nas-a, con versiones bloqueadas 7 días (ni root las borra), replicado a nas-b y copiable a cinta.
   - La cuenta de restic puede escribir, pero no destruir versiones.
@@ -266,7 +268,7 @@ Pruebas automáticas equivalentes: `scripts/test-zones.sh` (50 flujos), `scripts
   - Notificaciones de GLPI por correo a mailpit. Todo se configura con `scripts/glpi-setup.sh` (idempotente).
 - **IDS/IPS:**
   - Suricata 8 en modo IDS escucha WAN1 y WAN2 de fw-a1, fw-a2 y fw-b (reglas ET Open: scan, dos, exploit, attack_response).
-  - Cada minuto, el vigía `acc-ids-vigia.py` (cron de OPNsense) lee las alertas nuevas y bloquea 1 h la IP de origen de **cualquier** alerta en la tabla `ACC_IDS_BLOQUEO`, primera regla de cada WAN. Nunca bloquea redes del laboratorio, las sedes, el otro sitio ni los DNS públicos.
+  - Cada minuto, el vigía `acc-ids-vigia.py` (cron de OPNsense) lee las alertas nuevas y bloquea 1 h la IP de origen de los escaneos, exploits y DoS contra las WAN en la tabla `ACC_IDS_BLOQUEO`, primera regla de cada WAN. Nunca bloquea redes del laboratorio, las sedes, el otro sitio, los DNS públicos ni Cloudflare.
   - Envía a Zabbix (trapper) el n.º de alertas, la última firma y las IP bloqueadas.
 - **Seguridad perimetral:**
   - No hay puertos abiertos en Internet: todo entra por Cloudflare.
@@ -316,8 +318,7 @@ Pruebas automáticas equivalentes: `scripts/test-zones.sh` (50 flujos), `scripts
 - **pf no filtra** el tráfico de las VTI dirigido al propio firewall. Está mitigado en los kits y con SSH/GUI restringidos.
 - **Tareas programadas en el host:** corren con tu sesión abierta (temporizador systemd de usuario); con el equipo apagado se recuperan en la primera hora con el lab encendido.
 - **Tarea manual:** la toma de roles FSMO en un DR largo está documentada, no ejecutada.
-- **Cabecera `Remote-User`:** solo GLPI comprueba que venga de nginx-dmz. `portal` y `archivo` la aceptan de quien llegue a su puerto, así que su MFA depende de que el tráfico pase por la DMZ (ver §3, «Puntos débiles»).
-- **IDS:** bloquea después de la primera alerta, sin distinguir categorías, y una IP de origen falsificada podría hacer bloquear a un tercero.
+- **IDS:** bloquea después de la primera alerta. Una IP de origen falsificada podría bloquear a un tercero fuera de la lista de confianza.
 - **Sin syslog central ni MFA en RDP.** Los bloqueos quedan en el registro local de cada firewall.
 - **Entrega:** faltan capturas de pantalla (hay 5) y la copia completa del proyecto (exige el lab detenido).
 - **Correo:** las alertas van a mailpit (buzón de pruebas), no a un correo real.

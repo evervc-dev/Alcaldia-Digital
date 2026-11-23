@@ -42,6 +42,11 @@ pc-01-a      10.10.20.1    53   B Sede -> DNS del firewall (usa dc1/dc2)
 usr-pc       10.10.20.10   53   P USUARIOS -> DNS dc1
 usr-pc       10.10.20.10   389  P USUARIOS -> LDAP dc1 (puestos)
 usr-pc       10.10.20.40   3389 P USUARIOS -> RDP ts1
+usr-pc       10.10.20.21   80   B USUARIOS -> archivo directo (solo por la URL pública con MFA)
+usr-pc       10.10.20.20   8000 B USUARIOS -> portal directo
+usr-pc       10.10.20.31   80   B USUARIOS -> GLPI directo
+usr-pc       10.10.20.50   80   B USUARIOS -> LAM directo (solo WARP)
+usr-pc       10.20.20.10   53   P USUARIOS -> DNS dc2
 usr-pc       10.10.20.22   5432 B USUARIOS -> BD del portal
 usr-pc       10.10.60.10   9000 B USUARIOS -> NAS
 usr-pc       10.10.10.11   22   B USUARIOS -> GESTION
@@ -76,4 +81,11 @@ while read -r src dst port exp desc; do
   [ "$m" = "✘" ] || [ "$V" = -v ] && printf "%-4s %-10s %-48s %s\n" "$m" "$([ "$exp" = P ] && echo pasa || echo bloquear)" "$desc ($dst:$port)" "$txt"
 done <<< "$MATRIZ"
 echo "RESULTADO T1: $ok de $((ok+mal)) flujos según la política; $mal discrepancias"
+# Suplantación: dentro de la VLAN SERVIDORES no hay firewall; las aplicaciones deben ignorar Remote-User si no viene de nginx-dmz
+sup() { # puerto ip petición patrón-de-acceso descripción
+  r=$(docker exec "GNS3.ts1.$PID" bash -c 'exec 3<>/dev/tcp/'"$1/$2"' && printf "'"$3"' HTTP/1.0\r\nHost: x\r\nRemote-User: ana.funcionaria\r\nContent-Length: 0\r\n\r\n" >&3 && timeout 6 cat <&3' 2>/dev/null)
+  if [ -z "$r" ]; then echo "✘ $5: sin respuesta (no concluyente)"; mal=$((mal+1))
+  elif grep -qE "$4" <<<"$r"; then echo "✘ $5: SUPLANTACIÓN POSIBLE"; mal=$((mal+1)); else echo "✔ $5: cabecera ignorada"; fi; }
+sup 10.10.20.20 8000 "GET /funcionarios" "Sesión: <b>ana" "ts1 -> portal con Remote-User falso"
+sup 10.10.20.21 80 "POST /api/login" "^HTTP/1.. 200" "ts1 -> archivo con Remote-User falso"
 [ $mal = 0 ]

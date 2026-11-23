@@ -43,3 +43,14 @@ Problemas encontrados en T11 y arreglos:
 - La configuración en base64 (225 KB) no cabe como argumento: `fw.sh <fw> -` lee el script por la entrada estándar.
 - Con las reglas rotas no hay SSH por ADMIN: `fw.sh` con `GESTION=1` salta por `nc` en el switch del sitio hasta la IP de GESTION del firewall. `restaurar-config.sh` lo usa solo si ADMIN no responde.
 - `rc.reload_all` tarda varios minutos (el primer intento superó los 400 s): se recargan solo filtro, IPsec, OSPF e IDS.
+
+## T12: suplantación de identidad desde la red interna (23/11/2026)
+| Prueba | Antes | Después |
+|---|---|---|
+| `usr-pc` → `archivo` con `Remote-User: ana.funcionaria` | 200: sesión abierta sin MFA | bloqueado por el firewall |
+| `ts1` → `archivo` con la cabecera falsa | 200 | cabecera ignorada |
+| `ts1` → `portal/funcionarios` con la cabecera falsa | sesión de Ana | cabecera ignorada |
+| Petición de nginx-dmz con el secreto | — | portal y archivo reconocen a Ana |
+| Matriz de zonas | 50 flujos (no cubría esto) | **55/55** + 2 suplantaciones rechazadas |
+
+No probado: el login completo en el navegador con TOTP tras el cambio.

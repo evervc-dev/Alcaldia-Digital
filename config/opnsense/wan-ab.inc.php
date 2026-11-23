@@ -286,7 +286,16 @@ import ipaddress, json, os, socket, struct, subprocess
 EVE, POS, TABLA = "/var/log/suricata/eve.json", "/var/db/acc-ids.pos", "ACC_IDS_BLOQUEO"
 HOST = socket.gethostname().split(".")[0]
 CONFIANZA = [ipaddress.ip_network(n) for n in ("10.0.0.0/8", "172.16.0.0/12", "192.168.0.0/16", "100.64.0.0/10", "203.0.113.0/24",
-             "198.51.100.0/24", "192.0.2.0/24", "1.1.1.1/32", "1.0.0.1/32", "8.8.8.8/32", "8.8.4.4/32")]
+             "198.51.100.0/24", "192.0.2.0/24", "1.1.1.1/32", "1.0.0.1/32", "8.8.8.8/32", "8.8.4.4/32",
+             # Cloudflare (cloudflare.com/ips-v4): un origen falsificado no debe poder cortar el túnel
+             "173.245.48.0/20", "103.21.244.0/22", "103.22.200.0/22", "103.31.4.0/22", "141.101.64.0/18", "108.162.192.0/18",
+             "190.93.240.0/20", "188.114.96.0/20", "197.234.240.0/22", "198.41.128.0/17", "162.158.0.0/15", "104.16.0.0/13",
+             "104.24.0.0/14", "172.64.0.0/13", "131.0.72.0/22")]
+WAN = [ipaddress.ip_network(n) for n in ("203.0.113.0/24", "198.51.100.0/24")]
+def atacan_wan(e, sig):   # solo escaneos, exploits y DoS dirigidos a nuestras WAN (el resto se avisa, no se bloquea)
+    try: d = ipaddress.ip_address(e.get("dest_ip", ""))
+    except ValueError: return False
+    return any(d in n for n in WAN) and sig.startswith(("ET SCAN", "GPL SCAN", "ET EXPLOIT", "GPL EXPLOIT", "ET DOS"))
 def confianza(ip):
     try: a = ipaddress.ip_address(ip)
     except ValueError: return True
@@ -311,7 +320,7 @@ if size > pos:
             if e.get("event_type") != "alert": continue
             n += 1; src = e.get("src_ip", ""); sig = e.get("alert", {}).get("signature", "?")
             ultima = f"{sig} (origen {src} -> {e.get('dest_ip', '')}:{e.get('dest_port', '')})"
-            if not confianza(src): bloquear.add(src)
+            if not confianza(src) and atacan_wan(e, sig): bloquear.add(src)
         pos = f.tell()
 open(POS, "w").write(str(pos))
 for ip in sorted(bloquear):

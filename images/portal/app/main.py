@@ -1,5 +1,5 @@
 """Portal de trámites - Alcaldía Digital (mínimo funcional para la simulación)."""
-import os, html, secrets, datetime, json, base64, threading, time, urllib.request
+import hmac, os, html, secrets, datetime, json, base64, threading, time, urllib.request
 import psycopg
 from fastapi import FastAPI, Form, Request
 from fastapi.responses import HTMLResponse, RedirectResponse
@@ -36,6 +36,13 @@ def page(title, body):
 <header style="border-bottom:3px solid #1f4e79;margin-bottom:1rem"><h2 style="color:#1f4e79;margin:0">Alcaldía Digital · Portal de trámites</h2>
 <small>Servido desde: <b>{SITE}</b></small></header>{body}
 <footer style="margin-top:2rem;color:#777;font-size:.85rem">Centro de Datos Gubernamental · <a href="/consulta">Consultar folio</a> · <a href="/reportar">Reportar una falla</a> · <a href="/funcionarios">Área de funcionarios</a></footer></body></html>""")
+
+PROXY_SECRET = os.environ.get("PROXY_SECRET", "")
+def usuario(request):
+    """Usuario autenticado por Authelia. Solo se cree a nginx-dmz, que envía X-Acc-Proxy; sin secreto configurado, a nadie."""
+    if not PROXY_SECRET or not hmac.compare_digest(request.headers.get("X-Acc-Proxy", "").encode(), PROXY_SECRET.encode()):
+        return ""
+    return request.headers.get("Remote-User", "")
 
 @app.get("/", response_class=HTMLResponse)
 def inicio():
@@ -154,7 +161,7 @@ def reportar(nombre: str = Form(...), detalle: str = Form(...), sede: str = Form
 
 @app.get("/funcionarios", response_class=HTMLResponse)
 def bandeja(request: Request):
-    user = request.headers.get("Remote-User", "")
+    user = usuario(request)
     if not user:
         return page("Acceso", "<p>Esta área requiere iniciar sesión con su cuenta institucional.</p>")
     with db() as c:
@@ -167,8 +174,11 @@ def bandeja(request: Request):
 
 @app.post("/funcionarios/atender")
 def atender(request: Request, folio: str = Form(...)):
+    user = usuario(request)
+    if not user:
+        return HTMLResponse("Requiere iniciar sesión", status_code=403)
     with db() as c:
-        c.execute("UPDATE tramites SET estado='En proceso', atendido_por=%s WHERE folio=%s", (request.headers.get("Remote-User", "?"), folio))
+        c.execute("UPDATE tramites SET estado='En proceso', atendido_por=%s WHERE folio=%s", (user, folio))
     return RedirectResponse("/funcionarios", status_code=303)
 
 @app.get("/salud")

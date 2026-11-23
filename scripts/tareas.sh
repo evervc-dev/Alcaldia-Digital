@@ -32,6 +32,15 @@ resultado() { # tarea ok(0/1)
   zabbix "$1" "$2"
 }
 
+# ---------- 0) bucles de respaldo ----------
+# El nodo archivo usa la imagen original de filebrowser (sin enganche ni restic): tras reabrir el proyecto hay que reinstalarlos.
+for n in ts1 archivo portal-db dc1 zbx-db glpi-db glpi; do
+  encendido "$n" || continue
+  if ! docker exec "$(C "$n")" sh -c 'for c in /proc/[0-9]*/cmdline; do tr "\0" " " < $c 2>/dev/null | grep -q "[r]espaldo.sh bucle" && exit 0; done; exit 1'; then
+    log "respaldo: $n sin bucle; se reinstalan"; encendido nas-a zbx-server && bash scripts/respaldo-setup.sh >> "$LOG" 2>&1; break
+  fi
+done
+
 # ---------- 1) configuraciones de red ----------
 if toca configs 86400; then
   if ! encendido nas-a isp1; then log "configs: lab apagado (nas-a/isp1): reintento en la próxima hora"

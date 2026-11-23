@@ -9,7 +9,9 @@ DBIP=$([ "$SITE" = B ] && echo 10.20.20.22 || echo 10.10.20.22)
 REPL=$([ "$SITE" = B ] && printf "REPLICA_DE='10.10.20.22'\nREPLICA_CADA='3600'\n" || true)
 { printf "POSTGRES_USER='portal'\nPOSTGRES_PASSWORD='%s'\nPOSTGRES_DB='portal'\nPGDATA='/var/lib/postgresql/data/pgdata'\n" "$PORTAL_DB_PASS"; printf '%s' "$REPL"; } | put portal-db$SFX /etc/acc/pg.env
 CAT=$(echo "select id from glpi_itilcategories where name='Portal ciudadano: reporte de falla'" | docker exec -i -e MYSQL_PWD="$GLPI_DB_ROOT_PASS" "GNS3.glpi-db.$PID" mariadb -uroot -N glpi 2>/dev/null || true)
-printf "DATABASE_URL='postgresql://portal:%s@%s/portal'\nPORTAL_SITE='Site %s'\nTZ='America/El_Salvador'\nGLPI_URL='http://10.10.20.31/apirest.php'\nGLPI_PORTAL_USER='portal'\nGLPI_PORTAL_PASS='%s'\nGLPI_CATEGORIA_ID='%s'\n" "$PORTAL_DB_PASS" "$DBIP" "$SITE" "$GLPI_PORTAL_PASS" "$CAT" | put portal$SFX /etc/acc/portal.env   # reportes ciudadanos -> GLPI (en DR quedan pendientes)
+printf "DATABASE_URL='postgresql://portal:%s@%s/portal'\nPORTAL_SITE='Site %s'\nTZ='America/El_Salvador'\nGLPI_URL='http://10.10.20.31/apirest.php'\nGLPI_PORTAL_USER='portal'\nGLPI_PORTAL_PASS='%s'\nGLPI_CATEGORIA_ID='%s'\nPROXY_SECRET='%s'\n" "$PORTAL_DB_PASS" "$DBIP" "$SITE" "$GLPI_PORTAL_PASS" "$CAT" "${PROXY_SECRET:?gen-secrets.sh}" | put portal$SFX /etc/acc/portal.env   # reportes ciudadanos -> GLPI (en DR quedan pendientes)
+printf 'proxy_set_header X-Acc-Proxy "%s";\n' "$PROXY_SECRET" | put nginx-dmz$SFX /etc/nginx/conf.d/certs/portal-auth.inc
+printf 'proxy_set_header X-Acc-%s $acc_user;\n' "${ARCHIVO_HEADER_ID:?gen-secrets.sh}" | put nginx-dmz$SFX /etc/nginx/conf.d/certs/archivo-auth.inc   # el mismo nombre en filebrowser: archivo-setup.sh
 TOK_VAR="CF_TUNNEL_TOKEN_$SITE"; printf '%s' "${!TOK_VAR}" | put cloudflared-$(echo $SITE | tr A-Z a-z) /etc/acc/tunnel.token
 # --- gate y authelia (en B quedan en espera: se encienden en DR) ---
 GATE=gate$SFX; AUTH=authelia$SFX

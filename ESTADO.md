@@ -192,3 +192,8 @@ Pruebas formales T1–T13 con evidencias: failover Tier II (ya medido, re-docume
 - **Sala simulada** (`scripts/sensores.py`, servicio `acc-sensores`): UPS/generador/ambiente de la Fase 3 → Zabbix (`sala-a`, `sala-b`) con los umbrales de la Tabla 13 y escenarios inyectables. Estado: `~/.local/state/acc/sensores-*.json`.
 - **T10 carga** (`prueba-carga.py`) y **T11 restauración de configuración** (`restaurar-config.sh`, fuera de banda por GESTION con `GESTION=1 fw.sh`). Gotchas: `rc.reload_all` tarda minutos; los contenidos grandes van por la entrada estándar (`fw.sh <fw> -`).
 - **Entrega** (`scripts/exportar-entrega.sh` → `../entrega/`, fuera de git): topología portátil sin volúmenes (20 KB, guardia de secretos), diagrama, configs, pruebas, `IMAGENES.md`. La copia completa de GNS3 exige el proyecto detenido: `--solo-completo` al apagar. Lienzo reordenado (zbx-*/glpi* dentro del Site A, lam movido, recuadro A 840×935). Gotchas: el MCP `drawing list` falla (pydantic) y `update` exige el UUID completo; el PNG del MCP no dibuja textos → `topology/topologia.png` con `rsvg-convert`.
+
+## 23/11: suplantación por Remote-User (cerrada) y bucles de respaldo
+- `PROXY_SECRET` (portal) y `ARCHIVO_HEADER_ID` (filebrowser) en `.env`; `services-setup.sh` los entrega a nginx (`conf.d/certs/*-auth.inc`). Cambiar el del archivo exige el nodo DETENIDO y `archivo-setup.sh archivo` (y `archivo-b`).
+- USUARIOS solo tiene DNS/AD/RDP hacia servidores. El IDS solo bloquea escaneos/exploits/DoS contra las WAN y nunca a Cloudflare.
+- No escribir horas con cero delante en aritmética de shell (`08` = octal inválido).

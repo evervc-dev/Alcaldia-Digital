@@ -173,8 +173,8 @@ $rule('opt3', 'pass', 'DMZ -> Internet (cloudflared)', ['destination_net' => '10
 $rule('opt3', 'block', 'DMZ: resto bloqueado');
 foreach (['10.10.20.10/32', '10.20.20.10/32'] as $dc) { $rule('opt5', 'pass', "USUARIOS -> AD (puestos unidos al dominio) $dc", ['destination_net' => $dc, 'protocol' => 'TCP/UDP', 'destination_port' => 'PUERTOS_AD_CLIENTE', 'log' => '0']); }
 $rule('opt5', 'pass', 'USUARIOS -> escritorios (ts1 RDP)', ['destination_net' => '10.10.20.40/32', 'protocol' => 'TCP', 'destination_port' => 'PUERTOS_RDP']);
-$rule('opt5', 'pass', 'USUARIOS -> servicios web y DNS', ['destination_net' => 'opt2', 'protocol' => 'TCP/UDP', 'destination_port' => 'PUERTOS_WEB_DNS']);
-$rule('opt5', 'pass', 'USUARIOS -> servicios del Site B (DNS secundario / DR)', ['destination_net' => '10.20.20.0/24', 'protocol' => 'TCP/UDP', 'destination_port' => 'PUERTOS_WEB_DNS']);
+$rule('opt5', 'pass', 'USUARIOS -> DNS (la web, por la URL pública con MFA)', ['destination_net' => '10.10.20.10/32', 'protocol' => 'TCP/UDP', 'destination_port' => '53']);
+$rule('opt5', 'pass', 'USUARIOS -> DNS secundario (dc2)', ['destination_net' => '10.20.20.10/32', 'protocol' => 'TCP/UDP', 'destination_port' => '53']);
 $rule('opt5', 'pass', 'USUARIOS -> Internet', ['destination_net' => '10.0.0.0/8', 'destination_not' => '1', 'log' => '0']);
 $rule('opt5', 'block', 'USUARIOS: resto bloqueado');
 $rule('opt6', 'pass', 'RESPALDO -> DC local (LDAP/Kerberos/DNS para el NAS)', ['destination_net' => 'opt2', 'protocol' => 'TCP/UDP', 'destination_port' => 'PUERTOS_AD', 'log' => '0']);
