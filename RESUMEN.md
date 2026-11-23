@@ -1,7 +1,7 @@
 # Alcaldía Digital — Resumen del laboratorio
 
 > Simulación en GNS3 del centro de datos de la Alcaldía Digital: **Site A** (Tier II, principal), **Site B** (Tier I, recuperación en caliente), **3 sedes distritales** y publicación real en Internet con Cloudflare (`evervc.dev`).
-> Estado al 22/11/2026: **MVP completo (F0–F10)**. Detalle técnico en `ESTADO.md`; evidencias en `docs/pruebas/`; procedimientos en `docs/PROCEDIMIENTOS-DR.md`; operación diaria en `APAGAR-ENCENDER.md`.
+> Estado al 23/11/2026: **F0–F10 completas**, más mesa de servicio (F11), IDS (F12), SLA, sala simulada, pruebas T10–T11 y paquete de entrega. Pendiente: puesto Windows y guion de la defensa. Detalle técnico en `ESTADO.md`; evidencias en `docs/pruebas/`; procedimientos en `docs/PROCEDIMIENTOS-DR.md`; operación diaria en `APAGAR-ENCENDER.md`.
 
 ---
 
@@ -18,11 +18,11 @@
 | **Alta disponibilidad (Tier II)** | Si cae un firewall, un switch, un proveedor o un camino de energía, el servicio sigue | CARP + pfsync, doble ISP, enlaces dobles (bond) a dos switches, LACP |
 | **Sedes** | Cada sede llega al CD por 3 túneles cifrados con conmutación automática | Kit Docker (strongSwan + FRR + nftables + dnsmasq) tras CGNAT; OSPF elige el mejor túnel |
 | **Recuperación ante desastre** | Si se pierde el Site A, el portal vuelve desde el Site B | Réplica horaria de la BD, servicios en espera, cambio de DNS en Cloudflare (`dr-activar-b.sh`) |
-| **Monitoreo y alertas** | Ver el estado de la red y recibir correos cuando algo falla | Zabbix 7 (38 equipos, mapa de red) + correo a mailpit + **ticket automático en GLPI** |
+| **Monitoreo y alertas** | Ver el estado de la red y recibir correos cuando algo falla | Zabbix 7 (40 hosts, mapa de red, SLA mensual) + correo a mailpit + **ticket automático en GLPI** |
 | **Mesa de servicio** | El personal reporta incidencias; TI las atiende; las caídas abren tickets solas | GLPI 11 en `mesa.evervc.dev`, login único con el AD (perfil según grupo); Zabbix abre y resuelve tickets por la API |
-| **Respaldos** | Copia diaria cifrada, inmutable, en otro sitio y fuera de línea | restic → NAS con Object Lock **COMPLIANCE** → réplica a nas-b → cinta simulada |
+| **Respaldos** | Copias cifradas (archivo y GLPI cada 4 h; el resto diario), inmutables, en otro sitio y fuera de línea | restic → NAS con Object Lock **COMPLIANCE** → réplica a nas-b → cinta simulada |
 | **Sala simulada (energía y ambiente)** | Ver y alertar UPS, generador, temperatura y humedad que GNS3 no emula | `scripts/sensores.py` (servicio `acc-sensores`) envía cada minuto las lecturas de diseño de la Fase 3 a Zabbix; escenarios inyectables (corte, falla del generador, calor…) con los umbrales de la Tabla 13 |
-| **Detección y prevención de intrusiones** | Detectar escaneos y ataques desde Internet y cortar al atacante | Suricata (ET Open) en las WAN de los 3 firewalls; la IP atacante se bloquea 1 h; alerta en Zabbix y ticket en GLPI |
+| **Detección de intrusiones con bloqueo automático** | Detectar escaneos y ataques desde Internet y bloquear la IP en ≈ 1 min (no es IPS en línea) | Suricata (ET Open) en las WAN de los 3 firewalls; la IP atacante se bloquea 1 h; alerta en Zabbix y ticket en GLPI |
 | **Acceso remoto de TI** | Administrar desde casa de forma segura | Cloudflare Zero Trust + **WARP**, solo para los correos autorizados |
 
 ---
@@ -58,7 +58,81 @@
 
 ---
 
-## 3. Qué hace cada nodo
+## 3. Zonas de red: quién está en cada una y qué ofrece
+
+> Toda comunicación **entre** zonas pasa por el firewall del sitio (gateway `.1`; en A es la VIP CARP) y lo no permitido se bloquea y se registra. **Dentro** de una misma VLAN el tráfico no pasa por el firewall.
+> Site A = `10.10.<VLAN>.0/24`, Site B = `10.20.<VLAN>.0/24`.
+
+| Zona (VLAN) | Site A | Site B | Para qué |
+|---|---|---|---|
+| **Internet / WAN** | `isp1`, `isp2` → `wsw-a1`, `wsw-a2` → fw-a1/a2 (VIP `203.0.113.4`, `198.51.100.4`) | `isp1`, `isp2` → fw-b (`203.0.113.10`, `198.51.100.10`) | Salida y túneles IPsec. Ningún servicio publicado. Suricata escucha aquí |
+| **DMZ (30)** | `nginx-dmz` .10, `cloudflared-a` .11 | `nginx-dmz-b` .10, `cloudflared-b` .11 | Única entrada web desde Internet |
+| **SERVIDORES (20)** | `dc1`, `authelia`, `gate`, `portal`, `portal-db`, `archivo`, `zbx-server`, `zbx-web`, `zbx-db`, `glpi`, `glpi-db`, `mailpit`, `ts1`, `lam` | `dc2`, `portal-db-b`; en espera: `portal-b`, `authelia-b`, `gate-b`, `archivo-b` | Servicios y bases de datos |
+| **RESPALDO (60)** | `nas-a` .10 | `nas-b` .10, `tape` .20 (apagada) | Copias inmutables y cinta |
+| **ADMIN (40)** | `adm-pc` .50 | `adm-pc-b` .50 | Equipos del personal de TI |
+| **GESTION (10)** | `sw-a1` .11, `sw-a2` .12, IP de los firewalls (.2, .3) | `sw-b1` .11, `sw-b2` .12, fw-b (.1) | Gestión de equipos de red |
+| **USUARIOS (50)** | `usr-pc`, `pc-gui` (DHCP) | no existe | Puestos internos del Site A |
+| **Sedes** (`10.100.N.0/24`) | `kit-sede-0N`, `sw-sede-0N`, `pc-0N-a/b`; en la sede 1, `puesto-01` | — | Spokes: llegan por IPsec a A y a B |
+| **PFSYNC / VTI** | fw-a1 ↔ fw-a2; `172.16.x.x` | `172.16.x.x` | Sincronía del par CARP; túneles A↔B y sedes |
+
+### DMZ (VLAN 30)
+Solo tiene **dos equipos por sitio** y no guarda datos:
+| Equipo | Qué hace |
+|---|---|
+| `cloudflared-a` / `-b` | **Abre hacia fuera** el túnel QUIC a Cloudflare: por él entra el tráfico web, sin abrir puertos. El de A también es la salida de los clientes **WARP** |
+| `nginx-dmz` / `-b` | Proxy inverso: recibe el nombre pedido, exige login y horario cuando toca, y reenvía al servidor interno |
+
+| Nombre | nginx-dmz lo envía a | Control previo |
+|---|---|---|
+| `portal.evervc.dev` | `portal:8000` | Público; `/funcionarios` con MFA + horario |
+| `archivo.evervc.dev` | `archivo:80` | MFA + horario |
+| `auth.evervc.dev` | `authelia:9091` | Es el propio login |
+| `mesa.evervc.dev` | `glpi:80` | MFA + horario; `/apirest.php` cerrada |
+| `monitor.evervc.dev` | `zbx-web:8080` | Cloudflare Access + login de Zabbix |
+| `lam.evervc.dev` (443, solo WARP) | `lam:80` | MFA + login de LAM |
+
+En el Site B, `nginx-dmz-b` solo entra en juego en un DR (portal, archivo y auth). El portal, el archivo y GLPI **no están en la DMZ**: viven en SERVIDORES y la DMZ solo los expone.
+
+### SERVIDORES (VLAN 20)
+| Función | Equipos (A) | Servicio y puerto |
+|---|---|---|
+| Identidad | `dc1` (y `dc2` en B) | DNS 53, Kerberos 88, LDAP/LDAPS 389/636, SMB 445 |
+| Acceso web | `authelia`, `gate` | SSO + TOTP 9091; horario 9200 |
+| Portal | `portal`, `portal-db` | 8000; PostgreSQL 5432 |
+| Archivo | `archivo` | 80 |
+| Mesa de servicio | `glpi`, `glpi-db` | 80; MariaDB 3306 |
+| Monitoreo | `zbx-server`, `zbx-web`, `zbx-db` | 10051; 8080; 5432 |
+| Escritorios | `ts1` | RDP 3389 |
+| Gestión de cuentas | `lam` | 80 (publicado solo por WARP) |
+| Correo de pruebas | `mailpit` | SMTP 1025, web 8025 |
+
+### Otras zonas
+- **RESPALDO:** S3 de MinIO en 9000 y consola en 9001. `nas-a` replica a `nas-b`; `tape` solo se enciende para grabar.
+- **ADMIN:** única zona con acceso total; desde ella se entra por SSH (clave) y GUI a los firewalls.
+- **GESTION:** gestión de switches y vía de emergencia a los firewalls (`GESTION=1 scripts/fw.sh`).
+- **Sedes:** el kit da DHCP, NAT a Internet local y 3 túneles. Las sedes no se ven entre sí.
+
+### Quién puede hablar con quién
+| Origen | Permitido | Bloqueado |
+|---|---|---|
+| Internet | IKE/ESP desde las sedes y el otro sitio; la web entra por Cloudflare | Todo lo demás |
+| DMZ | SERVIDORES: 80, 443, 8000, 8080, 9091, 9200 y DNS (también a B); Internet; `cloudflared-a` → `ts1` RDP | LDAP, bases de datos, NAS, ADMIN, GESTION |
+| SERVIDORES | Internet, el otro sitio y GESTION; `zbx-server` → todo; NAS en 9000 | DMZ, ADMIN, consola del NAS |
+| USUARIOS | SERVIDORES: 53, 80 y 443; AD (dc1/dc2); `ts1` RDP; Internet | Bases de datos, NAS, ADMIN, GESTION |
+| Sedes | AD (dc1/dc2), DNS y RDP, ping a SERVIDORES; Internet por su ISP | Portal interno, NAS, ADMIN, GESTION, DMZ, otras sedes |
+| RESPALDO | AD, Internet y el otro sitio | Resto |
+| GESTION | Todo menos ADMIN | ADMIN |
+| ADMIN | Todo | — |
+| WARP (TI) | `lam.evervc.dev` y RDP a `ts1` | El resto de `10.x` (política de Gateway) |
+
+### Puntos débiles conocidos de la segmentación
+- La DMZ y USUARIOS alcanzan esos puertos en **toda** la VLAN SERVIDORES, no servidor por servidor. Por eso un puesto de USUARIOS puede abrir `archivo:80`, `glpi:80` o `lam:80` sin pasar por la DMZ.
+- Los servidores comparten VLAN, incluido `ts1` (donde trabajan usuarios): entre ellos no filtra el firewall.
+- `test-zones.sh` (50 flujos) no cubre estos dos casos.
+
+---
+
+## 4. Qué hace cada nodo
 
 ### Borde e Internet simulado
 | Nodo | Función |
@@ -112,7 +186,7 @@
 
 ---
 
-## 4. Pruebas manuales y respuesta esperada del centro de datos
+## 5. Pruebas manuales y respuesta esperada del centro de datos
 
 > Cómo provocar fallos en la GUI de GNS3:
 > - **Apagar un equipo:** clic derecho → *Stop*, o *Suspend* para un corte instantáneo.
@@ -137,9 +211,9 @@
 | 13 | Crear un usuario en LAM (con WARP), dentro de `Sede-02` | Puede iniciar sesión en el portal (TOTP), en ts1 y en `puesto-01`; un gestor de sede no puede darle `acceso-24h` | — |
 | 14 | **Pérdida del Site A**: *Stop* de `fw-a1`, `fw-a2`, `wsw-a1`, `wsw-a2`, `cloudflared-a` → encender `portal-b`, `authelia-b`, `gate-b`, `archivo-b` → `bash scripts/dr-activar-b.sh` | El portal vuelve **servido por el Site B** («Site B» en la portada), con los trámites anteriores. Retorno: `bash scripts/dr-retorno-a.sh` | 86 s |
 | 15 | `bash scripts/tareas.sh ahora cinta` (o encender `tape` a mano) | Enciende `tape`, graba un cartucho con todos los respaldos (`/data/cartuchos/registro.log`) y lo **apaga** solo | ≈ 1 min en total |
-| 16 | *Stop* de `lam` (o de cualquier servidor) y luego *Start* | Zabbix abre un **ticket en GLPI** (`mesa.evervc.dev`, categoría «Infraestructura», asignado a `zabbix`, urgencia según la severidad). Al volver, el ticket pasa a **Resuelto** con la solución automática. En Zabbix, el problema tiene el enlace «Ticket GLPI #N» | ticket ≈ 60 s · cierre < 1 min |
+| 16 | *Stop* de `lam` (o de cualquier servidor) y luego *Start* | Zabbix abre un **ticket en GLPI** (`mesa.evervc.dev`, categoría «Infraestructura», asignado a `zabbix`, prioridad y SLA según la severidad: aquí P1). Al volver, el ticket pasa a **Resuelto** con la solución automática. En Zabbix, el problema tiene el enlace «Ticket GLPI #N» | ticket ≈ 60 s · cierre < 1 min |
 | 17 | Entrar a `mesa.evervc.dev` con `ana.funcionaria` y con `tecnico.soporte` | Ana ve la vista simple (crear/seguir sus tickets); el técnico ve la vista completa con todos los tickets. Ninguno escribe contraseña en GLPI (SSO) | — |
-| 18 | Desde `atacante-ext`: `nmap -Pn -sS -p 22,1433,1521,3306,5432,5900-5905 203.0.113.4` | Suricata alerta («ET SCAN…»); en < 1 min la IP 198.18.0.66 queda **bloqueada 1 h** en las WAN; Zabbix: «IDS detectó un ataque» (alta) → **ticket en GLPI**. Para repetir antes de la hora: `pfctl -t ACC_IDS_BLOQUEO -T flush` en el firewall | bloqueo ≈ 40 s · ticket ≈ 1 min |
+| 18 | Desde `atacante-ext`: `nmap -Pn -sS -p 22,1433,1521,3306,5432,5900-5905 203.0.113.4` | Suricata alerta («ET SCAN…»); en < 1 min la IP 198.18.0.66 queda **bloqueada 1 h** en las WAN; Zabbix: «IDS detectó un ataque» (Media, P2) → **ticket en GLPI**. Para repetir antes de la hora: `pfctl -t ACC_IDS_BLOQUEO -T flush` en el firewall | bloqueo ≈ 40 s · ticket ≈ 1 min |
 | 19 | En `https://portal.evervc.dev/reportar` enviar un reporte; repetir con `glpi` apagado y luego encenderlo | Folio `R-…` y **ticket P4** (prioridad Baja, categoría «Portal ciudadano») en GLPI. Con GLPI caído: «Pendiente de registro» y se registra solo al volver | ticket inmediato · pendiente < 5 min tras volver |
 | 20 | *Stop* de `portal` y `dc1` 3 min, luego *Start* y `bash scripts/sla-informe.sh` | En Zabbix (*Servicios*) S2 en problema y **S1 OK** (dc2). El informe descuenta los minutos de S2 del margen del mes (4 h 22 min) y sigue «cumple» | — |
 | 21 | `python3 scripts/sensores.py a corte` (y luego `a normal`) | Zabbix: «UPS A/B en baterías» (**P1**, ticket) → a los ~20 s arranca el generador: «en baterías» se resuelve y queda «alimentado por el generador» (P3) | P1 → resuelto en < 1 min |
@@ -152,7 +226,7 @@ Pruebas automáticas equivalentes: `scripts/test-zones.sh` (50 flujos), `scripts
 
 ---
 
-## 5. Cómo funcionan los sistemas (por dentro)
+## 6. Cómo funcionan los sistemas (por dentro)
 
 - **Login y horario web:**
   1. nginx-dmz pregunta a `gate` (`auth_request`) en cada petición protegida.
@@ -162,7 +236,8 @@ Pruebas automáticas equivalentes: `scripts/test-zones.sh` (50 flujos), `scripts
 - **Portal:**
   - FastAPI genera un folio (`AAAAMMDD-XXXXXX`) y lo guarda en `portal-db`.
   - `/funcionarios` recibe el usuario por la cabecera `Remote-User` que pone nginx tras el login.
-  - `/reportar` guarda el reporte en `portal-db` (tabla `reportes`) y abre un ticket P4 en GLPI con la cuenta de servicio `portal` (Self-Service). Si GLPI no responde (caída o DR en el Site B) queda pendiente y se reintenta cada 5 min; tras un DR, `dr-retorno-a.sh` trae los pendientes de B a A con la BD.
+  - `/reportar` guarda el reporte en `portal-db` (tabla `reportes`) y abre un ticket P4 en GLPI con la cuenta de servicio `portal` (Self-Service). Si GLPI no responde (caída o DR en el Site B) queda pendiente y se reintenta cada 5 min; tras un DR, `dr-retorno-a.sh` debería traer los pendientes de B a A con la BD (no probado).
+- **Túneles entre sitios (A↔B):** dos IPsec VTI (ISP1 coste 10, ISP2 coste 20) con OSPF. Los inicia fw-b; un vigía (cron cada minuto) relanza los que no tengan SA.
 - **Túneles de sede:**
   - Cada kit **inicia** 3 túneles IKEv2 (atraviesan el CGNAT con NAT-T) hacia la VIP de A por WAN1 (coste 10), por WAN2 (coste 20) y hacia B (coste 100).
   - OSPF elige el de menor coste.
@@ -173,7 +248,8 @@ Pruebas automáticas equivalentes: `scripts/test-zones.sh` (50 flujos), `scripts
   - En un DR se marca `DR-ACTIVO` para que no la pise, y Cloudflare pasa a apuntar al túnel B.
   - El AD replica en continuo (DRS).
 - **Respaldos:**
-  - Cada noche a las 02:00, restic cifra y deduplica: homes de ts1, archivo, volcado del portal, backup del AD, volcado de MariaDB de GLPI y `/var/glpi` (llave de cifrado y adjuntos).
+  - restic cifra y deduplica. **Cada 4 h** (RPO de la Fase 2) y a los 5 min de arrancar: archivo, MariaDB de GLPI y `/var/glpi` (llave de cifrado y adjuntos). **Cada noche a las 02:00**: homes de ts1, BD del portal, AD y BD de Zabbix.
+  - Retención: 24 h completas + 30 diarias + 4 semanales + 12 mensuales.
   - Destino: nas-a, con versiones bloqueadas 7 días (ni root las borra), replicado a nas-b y copiable a cinta.
   - La cuenta de restic puede escribir, pero no destruir versiones.
 - **Monitoreo:**
@@ -182,7 +258,7 @@ Pruebas automáticas equivalentes: `scripts/test-zones.sh` (50 flujos), `scripts
   - Lee la antigüedad de la réplica (ODBC), la de los respaldos (restic, solo lectura) y la ocupación del NAS.
   - Envía correos de problema y de «RESUELTO».
   - **SLA mensual** por servicio (S1–S6, objetivos de la Tabla 4 de la Fase 4): informe con `bash scripts/sla-informe.sh` o en *Servicios → Informe de SLA*. S1 solo cuenta como caído si caen dc1 **y** dc2.
-  - Desde severidad *Media*, un webhook abre un ticket en GLPI (guarda su n.º como etiqueta del evento), añade seguimientos y lo resuelve al recuperarse.
+  - Desde severidad *Advertencia*, un webhook abre un ticket en GLPI (guarda su n.º como etiqueta del evento), añade seguimientos y lo resuelve al recuperarse.
 - **Mesa de servicio (GLPI):**
   - nginx-dmz pasa el usuario autenticado (Authelia + horario) en `Remote-User`; Apache en `glpi` **descarta esa cabecera** si no viene de nginx-dmz (nadie de la VLAN puede suplantar).
   - GLPI crea al usuario la primera vez con sus datos del AD (LDAPS a dc1, réplica dc2) y le asigna el perfil por su grupo (reglas).
@@ -190,13 +266,14 @@ Pruebas automáticas equivalentes: `scripts/test-zones.sh` (50 flujos), `scripts
   - Notificaciones de GLPI por correo a mailpit. Todo se configura con `scripts/glpi-setup.sh` (idempotente).
 - **IDS/IPS:**
   - Suricata 8 en modo IDS escucha WAN1 y WAN2 de fw-a1, fw-a2 y fw-b (reglas ET Open: scan, dos, exploit, attack_response).
-  - Cada minuto, el vigía `acc-ids-vigia.py` (cron de OPNsense) lee las alertas nuevas y bloquea 1 h la IP de origen en la tabla `ACC_IDS_BLOQUEO`, primera regla de cada WAN. Nunca bloquea redes del laboratorio, las sedes, el otro sitio ni los DNS públicos.
+  - Cada minuto, el vigía `acc-ids-vigia.py` (cron de OPNsense) lee las alertas nuevas y bloquea 1 h la IP de origen de **cualquier** alerta en la tabla `ACC_IDS_BLOQUEO`, primera regla de cada WAN. Nunca bloquea redes del laboratorio, las sedes, el otro sitio ni los DNS públicos.
   - Envía a Zabbix (trapper) el n.º de alertas, la última firma y las IP bloqueadas.
 - **Seguridad perimetral:**
   - No hay puertos abiertos en Internet: todo entra por Cloudflare.
   - Firewall por zonas con mínimo privilegio y registro de bloqueos.
   - SSH de los firewalls solo con clave y solo desde ADMIN/GESTION.
   - Los kits filtran el acceso de las sedes a la gestión.
+- **Sala simulada:** `sensores.py` envía cada minuto a Zabbix los UPS, el generador, la temperatura y la humedad de cada sitio.
 - **Infraestructura como código:**
   - Todo se reconstruye con `scripts/` y `config/`.
   - Los secretos solo están en `.env` (fuera de git).
@@ -204,7 +281,7 @@ Pruebas automáticas equivalentes: `scripts/test-zones.sh` (50 flujos), `scripts
 
 ---
 
-## 6. Qué hay, qué hay a medias y qué se puede agregar
+## 7. Qué hay, qué hay a medias y qué se puede agregar
 
 ### ✅ Hecho y probado
 - **Tier II en el Site A:**
@@ -225,7 +302,10 @@ Pruebas automáticas equivalentes: `scripts/test-zones.sh` (50 flujos), `scripts
 - **Mesa de servicio:** GLPI en `mesa.evervc.dev` con SSO del AD, perfiles por grupo y tickets automáticos desde Zabbix (abrir y resolver, probado); la ciudadanía reporta fallas desde el portal (ticket P4, probado también con GLPI caído).
 - **Respaldos 3-2-1:** WORM COMPLIANCE, réplica a nas-b, cinta y respaldo de configuraciones; resistentes al ransomware (probado).
 - **Tareas programadas:** respaldo de configuraciones diario y cinta semanal automáticos (temporizador systemd en el host), vigilados por Zabbix.
-- **Pruebas formales:** T1–T8 con evidencias; T9 documentada.
+- **Operación (Fase 4):** catálogo, SLA P1–P4 en GLPI y SLA mensual S1–S6 en Zabbix (`sla-informe.sh`).
+- **Sala simulada:** UPS, generador y ambiente con escenarios (probados: corte y falla del generador).
+- **Pruebas formales:** T1–T8, **T10** (carga) y **T11** (restaurar una configuración) con evidencias; T9 solo documentada.
+- **Entrega:** `exportar-entrega.sh` (topología sin secretos, diagrama, configs, pruebas e imágenes) en `../entrega/`.
 
 ### 🟡 A medias / limitaciones conocidas
 - **Puesto Windows** para la defensa:
@@ -236,12 +316,16 @@ Pruebas automáticas equivalentes: `scripts/test-zones.sh` (50 flujos), `scripts
 - **pf no filtra** el tráfico de las VTI dirigido al propio firewall. Está mitigado en los kits y con SSH/GUI restringidos.
 - **Tareas programadas en el host:** corren con tu sesión abierta (temporizador systemd de usuario); con el equipo apagado se recuperan en la primera hora con el lab encendido.
 - **Tarea manual:** la toma de roles FSMO en un DR largo está documentada, no ejecutada.
+- **Cabecera `Remote-User`:** solo GLPI comprueba que venga de nginx-dmz. `portal` y `archivo` la aceptan de quien llegue a su puerto, así que su MFA depende de que el tráfico pase por la DMZ (ver §3, «Puntos débiles»).
+- **IDS:** bloquea después de la primera alerta, sin distinguir categorías, y una IP de origen falsificada podría hacer bloquear a un tercero.
+- **Sin syslog central ni MFA en RDP.** Los bloqueos quedan en el registro local de cada firewall.
+- **Entrega:** faltan capturas de pantalla (hay 5) y la copia completa del proyecto (exige el lab detenido).
 - **Correo:** las alertas van a mailpit (buzón de pruebas), no a un correo real.
 - **Sistemas mínimos (portal, archivo):** son demostrativos y está previsto **actualizarlos después**. La arquitectura (Authelia, `gate`, cabecera `Remote-User`, réplica y respaldos) no cambia si se sustituye la aplicación.
 - **Repositorio de prueba roto** `respaldos/restic` en los NAS: inocuo, se puede borrar (ver `ESTADO.md`).
 
 ### ➕ Se puede agregar
-- **GLPI:** inventario automático de equipos (agente GLPI), catálogo de servicios y SLA por categoría; recolector de correo para abrir tickets por email.
+- **GLPI:** inventario automático de equipos (agente GLPI), problemas/cambios/KEDB; recolector de correo para abrir tickets por email.
 - **IPS en línea** (modo *divert* o *netmap* de Suricata, que descarta el paquete en el acto) en lugar de la respuesta activa; inspección de la DMZ.
 - **oxidized** (interfaz web con el historial de configuraciones) en lugar de `backup-configs.sh` + git.
 - **Correo real** (SMTP saliente) para las alertas; alerta de cambios hechos en LAM.

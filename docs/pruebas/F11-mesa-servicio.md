@@ -23,8 +23,8 @@
 | G4 | Misma cabecera `Remote-User: admin.dc` enviada desde `portal` (otro servidor de la VLAN) | ✅ ignorada: formulario de login, el usuario **no** se crea |
 | G5 | `https://mesa.evervc.dev/` desde Internet sin sesión | ✅ 302 a `auth.evervc.dev` (MFA) |
 | G6 | `https://mesa.evervc.dev/apirest.php/initSession` desde Internet | ✅ 403 |
-| G7 | *Stop* de `lam` | ✅ ticket #3 «[Zabbix] lam: ICMP Ping: Unavailable by ICMP ping» en **60 s**, asignado a `zabbix`, urgencia 4 (Alta) |
-| G8 | Recuperación del problema | ✅ ticket #3 en estado **Resuelto** con la solución «Resuelto automáticamente por el monitoreo (Zabbix)» (39 s después de abrirse) |
+| G7 | *Stop* de `lam` | ✅ ticket abierto en **60 s** (medido en los tickets #1 y #2), asignado a `zabbix` desde el #2, urgencia 4 |
+| G8 | Recuperación del problema | 🟡 El #3 pasó solo a **Resuelto**, pero con `lam` **todavía apagado** (39 s; causa no confirmada, quizá la reconfiguración de Zabbix). El cierre al recuperarse de verdad quedó probado después con la sala simulada (tickets #31–#36, F8) |
 | G9 | Respaldo de `glpi-db` y `glpi` | ✅ OK en 2 s y 1 s; Zabbix y `lab-check` vigilan su antigüedad |
 
 ## Problemas encontrados y arreglos
