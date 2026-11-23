@@ -201,3 +201,5 @@ Pruebas formales T1–T13 con evidencias: failover Tier II (ya medido, re-docume
 ## 23/11: roles (4 niveles) y accesos de emergencia — ver docs/ROLES-Y-ACCESOS.md
 - `horario.conf` ya NO manda: la política está en el AD y se edita en `lam.evervc.dev/accesos`.
 - Gotchas: no usar `pkill -f gate.py` (mata también el bucle de arranque): `kill $(pidof python3)`. Zabbix usa LDAP; el grupo «Zabbix administrators» sigue con autenticación interna (rescate).
+- **OPNsense con AD** (`opn-ldap.sh`). `backup-configs.sh` tapa `ldap_bindpw` y quita de `configs/` los usuarios que crea el login (datos personales).
+- **MAC duplicada (causa de caídas intermitentes tras encender):** el host podía pisar la MAC de `eth0` con una repetida (mailpit, portal-db y nas-a). `interfaces` fija la de Docker (`02:42…`) en bond0.

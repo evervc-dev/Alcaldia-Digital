@@ -32,11 +32,13 @@ python3 -I - "$TMP/completo" configs <<'PY'
 import re, sys, pathlib
 src, dst = pathlib.Path(sys.argv[1]), pathlib.Path(sys.argv[2])
 # solo etiquetas cuyo NOMBRE completo es de secreto (no rekey_time, keyingtries, passive...)
-SECRET_TAG = re.compile(r'<([\w.-]*(?:pass|password|passwd|secret|key|hash|psk|prv|privkey|community|token|seed))>(.*?)</\1>', re.I | re.S)
+SECRET_TAG = re.compile(r'<([\w.-]*(?:pass|password|passwd|bindpw|secret|key|hash|psk|prv|privkey|community|token|seed))>(.*?)</\1>', re.I | re.S)
 for f in sorted(src.iterdir()):
     t = f.read_text(errors="replace")
     if f.name.endswith(".xml"):
         t = SECRET_TAG.sub(lambda m: f"<{m.group(1)}>***</{m.group(1)}>" if m.group(2).strip() else m.group(0), t)
+        # usuarios creados al entrar con el AD: datos personales del equipo (el repo es público); solo se conserva root
+        t = re.sub(r'\s*<user\b[^>]*>(?:(?!</user>).)*?</user>', lambda m: m.group(0) if '<scope>system</scope>' in m.group(0) else '', t, flags=re.S)
         t = re.sub(r'(<authorizedkeys>)[^<]*(</authorizedkeys>)', r'\1***\2', t)
         t = re.sub(r'(<revision>.*?</revision>)', '<revision>(omitida)</revision>', t, flags=re.S)   # evita ruido en el diff
     else:

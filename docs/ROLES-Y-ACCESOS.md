@@ -29,5 +29,16 @@ Una cuenta **sin rol** no entra a la web ni a los escritorios. Instalar: `roles-
 | Zabbix: admin.dc = Super admin, ti.guardia = Admin, soporte.mesa = lectura, Ana no entra | ✅ |
 | Navegador con TOTP, crear TI/Soporte en LAM, restablecer contraseñas con Soporte, escritorio RDP real | ⏳ sin probar |
 
+## Firewalls (OPNsense) con el AD — 23/11
+`opn-ldap.sh <fw>`: LDAPS con la CA del laboratorio a los dos DC. `rol-admin`: todo. `rol-ti`: reglas, alias, IDS, estado y registros; **no** usuarios, copias de configuración, claves ni reinicio. Soporte y empleados no entran. La base local (`root`) sigue como rescate y SSH no cambia (solo clave).
+
+| GUI de fw-a1, fw-a2 y fw-b | Entra | IDS y reglas | Usuarios y copias |
+|---|---|---|---|
+| Administrador | ✅ | ✅ | ✅ |
+| TI | ✅ | ✅ | ❌ |
+| Soporte / empleado / contraseña falsa | ❌ | ❌ | ❌ |
+
+Personas: `equipo-setup.sh <archivo privado>`. Sin probar en los firewalls: login con dc1 caído.
+
 ## Pendiente
-Login con AD en OPNsense · VLAN de Soporte · WARP para Soporte · qué rol entra en qué puesto · puestos Windows (no ejecutan el agente) · Zabbix solo consulta dc1.
+VLAN de Soporte · qué rol entra en qué puesto · puestos Windows (no ejecutan el agente) · Zabbix solo consulta dc1.

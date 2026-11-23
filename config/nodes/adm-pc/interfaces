@@ -9,4 +9,5 @@ iface bond0 inet static
 	address 10.10.40.50
 	netmask 255.255.255.0
 	gateway 10.10.40.1
+	up ip link set bond0 address $(sed -n "s/^Permanent HW addr: \(02:42:.*\)/\1/p" /proc/net/bonding/bond0 | head -1)   # MAC de Docker (única): el host puede pisar la de eth0 con una repetida
 	up printf 'nameserver 10.10.40.1\nnameserver 1.1.1.1\n' > /etc/resolv.conf
