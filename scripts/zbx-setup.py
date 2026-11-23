@@ -262,6 +262,41 @@ for fw in ("fw-a1", "fw-a2", "fw-b"):
     trigger(hid, f"{fw}: el vigía del IDS no informa", f"nodata(/{fw}/ids.alertas,10m)=1", SEV["warning"],
             "El cron 'acc ids-vigia' del firewall no envía datos (¿Suricata o el cron detenidos?).")
 
+# ---------- Sala de cómputo simulada (Fase 3 §4 y Fase 4 Tabla 13): UPS (tarjeta de red), generador y ambiente ----------
+# GNS3 no emula la energía: scripts/sensores.py (systemd --user acc-sensores) envía lecturas por trapper cada minuto
+# y permite inyectar escenarios (corte, falla del generador, calor, humedad, sobrecarga, UPS fuera de servicio).
+for sala, sitio, upss, grp in (("sala-a", "A", ("a", "b"), "Site A"), ("sala-b", "B", ("b1",), "Site B")):
+    hid, _ = host(sala, None, grp, desc=f"Sala de cómputo del Site {sitio} (simulada): UPS SRT5KRMXLT 4,8 kW, generador C30D6, sensores ASHRAE. "
+                                       "Escenarios: scripts/sensores.py <sitio> <escenario>")
+    HOSTS[sala] = hid
+    num = lambda n, k, u="", vt=0: item(hid, None, n, k, type=2, delay="0", value_type=vt, units=u)
+    num("Sala: temperatura", "sala.temp", "°C"); num("Sala: humedad relativa", "sala.hum", "%")
+    num("Carga de TI del sitio", "ti.carga", "kW"); num("Red comercial presente (1 = sí)", "red.comercial", vt=3)
+    num("Generador en marcha (1 = sí)", "gen.marcha", vt=3); num("Generador: falla de arranque (1 = sí)", "gen.falla", vt=3)
+    T = lambda d, e, sev, c: trigger(hid, f"{sala}: {d}", e, SEV[sev], c)
+    T("temperatura fuera de rango ASHRAE (18–27 °C)", f"last(/{sala}/sala.temp)>27 or last(/{sala}/sala.temp)<18", "average",
+      "Tabla 13: P2. Revisar los splits (N+1) y la puerta de la sala.")
+    T("humedad fuera de rango (20–80 %)", f"last(/{sala}/sala.hum)>80 or last(/{sala}/sala.hum)<20", "warning", "Tabla 13: P3.")
+    T("sitio alimentado por el generador (sin red comercial)", f"last(/{sala}/red.comercial)=0 and last(/{sala}/gen.marcha)=1", "warning",
+      "Corte de la red comercial: el ATS transfirió al generador. Vigilar combustible (Fase 4, mantenimiento).")
+    T("generador: falla de arranque", f"last(/{sala}/gen.falla)=1", "average", "Tabla 13: P2. Si no hay red comercial, los UPS solo dan minutos: P-E.")
+    T("sensores de la sala sin datos", f"nodata(/{sala}/sala.temp,5m)=1", "warning", "¿Simulador acc-sensores detenido? systemctl --user status acc-sensores")
+    if sitio == "A":
+        T("carga de TI > 4,39 kW (aviso de capacidad)", f"last(/{sala}/ti.carga)>4.39", "info",
+          "Tabla 13: P4, umbral para el tercer split (Fase 3). Aviso en el panel (Información: sin ticket).")
+    for u in upss:
+        k = lambda x: f"ups.{x}[{u}]"
+        num(f"UPS {u.upper()}: carga", k("carga"), "%"); num(f"UPS {u.upper()}: autonomía estimada", k("autonomia"), "min")
+        num(f"UPS {u.upper()}: en baterías (1 = sí)", k("bateria"), vt=3); num(f"UPS {u.upper()}: en servicio (1 = sí)", k("servicio"), vt=3)
+        T(f"UPS {u.upper()} en baterías", f"last(/{sala}/{k('bateria')})=1", "high",
+          "Tabla 13: P1 (cualquier transferencia). Autonomía de 5,4 min con todo el Site A en un UPS (Fase 3): debe arrancar el generador.")
+        T(f"UPS {u.upper()}: carga > 80 % de 4,8 kW", f"last(/{sala}/{k('carga')})>80", "average", "Tabla 13: P2 (80 % de carga continua, NFPA 70).")
+        T(f"UPS {u.upper()} fuera de servicio", f"last(/{sala}/{k('servicio')})=0", "average",
+          "Falla del UPS: su camino de energía queda sin respaldo (en el Site A, el otro camino lleva toda la carga).")
+        T(f"UPS {u.upper()}: autonomía < 2 min en baterías → aplicar P-E (apagado ordenado)",
+          f"last(/{sala}/{k('bateria')})=1 and last(/{sala}/{k('autonomia')})<2", "disaster",
+          "Fase 5 §4.4: el generador no arrancó; apagar de forma ordenada (docs/PROCEDIMIENTOS-DR.md, P-E) y aplicar P-A.")
+
 # ---------- Tareas programadas (scripts/tareas.sh en el host, systemd --user cada hora) ----------
 # Trapper: el script envía 1 (OK) o 0 (fallo) con zabbix_sender. Sin dato en el plazo -> la tarea no se ejecuta.
 hid, _ = host("tareas-programadas", None, "Site A",

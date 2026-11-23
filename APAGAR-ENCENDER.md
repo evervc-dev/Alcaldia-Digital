@@ -76,6 +76,7 @@ cd ~/Documents/acc-project/Alcaldia-Digital/config/opnsense && python3 -m http.s
 
 ## 💾 Respaldos (automáticos)
 - Cada noche a las **02:00** se respaldan ts1, archivo, portal-db y dc1 en el NAS (no hay que hacer nada; si el PC está apagado a esa hora, ese día no hay copia y Zabbix avisa a las 26 h).
+- **Sala simulada:** el servicio `acc-sensores` (lo instala `tareas-instalar.sh`) envía a Zabbix cada minuto UPS, generador, temperatura y humedad. Escenarios para la defensa: `python3 scripts/sensores.py a corte`, `b generador-falla`, `a calor`… y `a normal` / `b normal` para volver.
 - **Tareas programadas (automáticas):** el temporizador `acc-tareas.timer` (systemd de usuario, se instala una vez con `bash scripts/tareas-instalar.sh`) revisa cada hora y, con el lab encendido, ejecuta:
   - el **respaldo de configuraciones de red** cada 24 h (`backup-configs.sh` + commit local de `configs/`, súbelo con push);
   - la **cinta** cada 7 días (enciende `tape`, graba el cartucho y lo **apaga** solo).

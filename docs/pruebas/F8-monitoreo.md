@@ -56,3 +56,20 @@ Acceso: **https://monitor.evervc.dev** → Cloudflare Access (solo correos del e
 | M7 | *Stop* de `portal` y de `dc1` durante unos 3 min | ✅ S2 en problema; **S1 sigue OK** (dc2 responde). Informe: S2 con 3 min de caída, 99,99 % en el mes, ✔ cumple (margen 4 h 19 min) |
 
 - Gotcha: en la API de Zabbix 7, `algorithm` 1 = «el más grave **si todos** los hijos tienen problema» y 2 = «el más grave de los hijos» (al revés de lo intuitivo).
+
+## Sala de cómputo simulada: UPS, generador y ambiente (Fase 3 §4, Fase 4 Tabla 13) — 22/11/2026
+GNS3 no emula energía ni clima. `scripts/sensores.py` actúa como las tarjetas de red de los UPS (NMC 3) y los sensores ASHRAE. Lo lanza el servicio `acc-sensores` (systemd --user, instalado con `tareas-instalar.sh`) y envía cada minuto por trapper a los hosts `sala-a` y `sala-b`.
+
+| Valor de diseño (Fase 3) | Simulado |
+|---|---|
+| Carga de TI 3,29 kW (A) / 2,29 kW (B) | ±3 % |
+| UPS de 4,8 kW: A y B al 34,3 % cada uno (68,6 % si falla el otro); B1 al 47,7 % | calculado |
+| Autonomía: recta por la curva del fabricante (3 000 W → 6,12 min; 3 500 W → 4,88 min) | 9,4 min (A, dos UPS) · 7,9 min (B) · 5,4 min (A con un UPS) |
+| Sala 22–24 °C y 45–55 % HR en normal | aleatorio en rango |
+
+Disparadores de la Tabla 13: temperatura fuera de 18–27 °C (P2), HR fuera de 20–80 % (P3), carga del UPS > 80 % (P2), **UPS en baterías (P1)**, carga de TI > 4,39 kW (P4: Información, sin ticket), falla de arranque del generador (P2), sitio en generador (P3), UPS fuera de servicio (P2) y autonomía < 2 min en baterías → **aplicar P-E** (desastre).
+
+| # | Escenario | Resultado |
+|---|---|---|
+| E1 | `sensores.py a corte` | ✅ 21:19:27 UPS A y B en baterías (P1, tickets #31/#32) → 21:20:00 generador en marcha: resueltos y tickets cerrados; «alimentado por el generador» (P3, #33) hasta `a normal` |
+| E2 | `sensores.py b generador-falla` | ✅ falla de arranque (P2, #34) + UPS B1 en baterías (P1, #35); la autonomía bajó de 8,0 a 1,1 min y a las 21:28 «aplicar P-E» (desastre, #36) |

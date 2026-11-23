@@ -21,6 +21,7 @@
 | **Monitoreo y alertas** | Ver el estado de la red y recibir correos cuando algo falla | Zabbix 7 (38 equipos, mapa de red) + correo a mailpit + **ticket automático en GLPI** |
 | **Mesa de servicio** | El personal reporta incidencias; TI las atiende; las caídas abren tickets solas | GLPI 11 en `mesa.evervc.dev`, login único con el AD (perfil según grupo); Zabbix abre y resuelve tickets por la API |
 | **Respaldos** | Copia diaria cifrada, inmutable, en otro sitio y fuera de línea | restic → NAS con Object Lock **COMPLIANCE** → réplica a nas-b → cinta simulada |
+| **Sala simulada (energía y ambiente)** | Ver y alertar UPS, generador, temperatura y humedad que GNS3 no emula | `scripts/sensores.py` (servicio `acc-sensores`) envía cada minuto las lecturas de diseño de la Fase 3 a Zabbix; escenarios inyectables (corte, falla del generador, calor…) con los umbrales de la Tabla 13 |
 | **Detección y prevención de intrusiones** | Detectar escaneos y ataques desde Internet y cortar al atacante | Suricata (ET Open) en las WAN de los 3 firewalls; la IP atacante se bloquea 1 h; alerta en Zabbix y ticket en GLPI |
 | **Acceso remoto de TI** | Administrar desde casa de forma segura | Cloudflare Zero Trust + **WARP**, solo para los correos autorizados |
 
@@ -141,6 +142,9 @@
 | 18 | Desde `atacante-ext`: `nmap -Pn -sS -p 22,1433,1521,3306,5432,5900-5905 203.0.113.4` | Suricata alerta («ET SCAN…»); en < 1 min la IP 198.18.0.66 queda **bloqueada 1 h** en las WAN; Zabbix: «IDS detectó un ataque» (alta) → **ticket en GLPI**. Para repetir antes de la hora: `pfctl -t ACC_IDS_BLOQUEO -T flush` en el firewall | bloqueo ≈ 40 s · ticket ≈ 1 min |
 | 19 | En `https://portal.evervc.dev/reportar` enviar un reporte; repetir con `glpi` apagado y luego encenderlo | Folio `R-…` y **ticket P4** (prioridad Baja, categoría «Portal ciudadano») en GLPI. Con GLPI caído: «Pendiente de registro» y se registra solo al volver | ticket inmediato · pendiente < 5 min tras volver |
 | 20 | *Stop* de `portal` y `dc1` 3 min, luego *Start* y `bash scripts/sla-informe.sh` | En Zabbix (*Servicios*) S2 en problema y **S1 OK** (dc2). El informe descuenta los minutos de S2 del margen del mes (4 h 22 min) y sigue «cumple» | — |
+| 21 | `python3 scripts/sensores.py a corte` (y luego `a normal`) | Zabbix: «UPS A/B en baterías» (**P1**, ticket) → a los ~20 s arranca el generador: «en baterías» se resuelve y queda «alimentado por el generador» (P3) | P1 → resuelto en < 1 min |
+| 22 | `python3 scripts/sensores.py b generador-falla` (y luego `b normal`) | «Generador: falla de arranque» (P2) + «UPS B1 en baterías» (P1); la autonomía baja de 7,9 min y a < 2 min salta **«aplicar P-E»** (desastre). Es el disparador del procedimiento P-E / prueba 14 | ≈ 6 min hasta P-E |
+| 23 | `python3 scripts/sensores.py a calor` / `a humedad` / `a sobrecarga` | > 27 °C → P2 (en ~4 min) · 85 % HR → P3 · 4,6 kW + UPS B fuera de servicio → UPS A > 80 % (P2) y aviso de capacidad | — |
 
 Pruebas automáticas equivalentes: `scripts/test-zones.sh` (50 flujos), `scripts/f10-sonda.sh` (mide cortes) y `scripts/lab-check.sh` (estado general).
 
