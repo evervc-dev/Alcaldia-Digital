@@ -65,3 +65,7 @@ if [ -n "$OPN_IMG" ]; then
 else
   echo "! No hay imagen OPNsense en ~/GNS3/images/QEMU (ejecuta get-opnsense.sh)"
 fi
+# Puestos completos (plantilla-windows.sh / plantilla-linux.sh). Windows: reloj en hora local, si no Kerberos lo rechaza (6 h de diferencia)
+puesto() { [ -f ~/GNS3/images/QEMU/"$2" ] || return 0; create "$1" "$(python3 -c 'import json,sys;n,i,ram,cpu,ifc,opt=sys.argv[1:];print(json.dumps({"name":n,"template_type":"qemu","compute_id":"local","platform":"x86_64","category":"guest","hda_disk_image":i,"hda_disk_interface":ifc,"ram":int(ram),"cpus":int(cpu),"adapters":1,"adapter_type":"virtio-net-pci","console_type":"vnc","options":opt,"on_close":"shutdown_signal","linked_clone":True}))' "$@")"; }
+puesto ACC-Windows11 windows11-acc.qcow2 3072 2 sata   "-cpu host,hv_relaxed,hv_vapic,hv_spinlocks=0x1fff,hv_time -rtc base=localtime -vga std -usb -device usb-tablet"
+puesto ACC-Linux     linux-acc.qcow2     1536 2 virtio "-cpu host -vga std -usb -device usb-tablet"

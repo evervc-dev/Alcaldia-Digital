@@ -205,3 +205,9 @@ Pruebas formales T1–T13 con evidencias: failover Tier II (ya medido, re-docume
 - **MAC duplicada (causa de caídas intermitentes tras encender):** el host podía pisar la MAC de `eth0` con una repetida (mailpit, portal-db y nas-a). `interfaces` fija la de Docker (`02:42…`) en bond0.
 - **Cinta «nas-b no responde» al encender todo (arreglado 23/11):** `cinta.sh` hacía `mc alias set` una sola vez; si la red aún no subía, no se guardaba y fallaba los 10 min. Ahora va dentro del bucle (reproducido con la red caída 30 s: el viejo no se recupera, el nuevo graba a los 32 s). Entra al reabrir el proyecto (imagen `acc/nas`).
 - Authelia envía los códigos por correo real (`SMTP_*` en `.env`); `codigo-mfa.sh` solo sirve con mailpit.
+
+## 23/11: plantillas QEMU completas (Windows 11 LTSC y Debian 13)
+- `plantilla-windows.sh` / `plantilla-linux.sh` → `~/Documents/acc-project/plantillas` (fuera de git; contraseñas locales en PLANTILLAS.md) → subir a GNS3 → `gns3-templates.sh`. Windows va generalizado (sysprep): cada copia es un equipo distinto.
+- Nodos: win-empleado (sw-sede-02 eth0), lin-empleado (sw-sede-03 eth0), win-admin (sw-a2 eth10, ADMIN), lin-soporte (sw-a2 eth18, USUARIOS). sw-a2 eth8 queda libre en ADMIN.
+- Unir: Windows `C:\acc\unir.ps1 -Nombre X` (administrador); Linux `sudo unir-dominio X`.
+- Gotchas: GNS3 exige registrar la imagen (API `images/upload` o su autodetección) antes de crear la plantilla; Windows necesita `-rtc base=localtime` (Kerberos).

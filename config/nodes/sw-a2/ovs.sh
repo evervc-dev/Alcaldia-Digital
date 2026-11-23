@@ -27,9 +27,9 @@ ovs-vsctl set port eth23 tag=20   # zbx-server (monitoreo)
 ovs-vsctl set port eth2 tag=20    # zbx-web (monitoreo)
 ovs-vsctl set port eth0 tag=20    # glpi (mesa de servicio)
 ovs-vsctl set port eth5 tag=20    # glpi-db (BD de GLPI)
+ovs-vsctl set port eth8 tag=40    # puesto de TI/administración (ADMIN)
+ovs-vsctl set port eth10 tag=40   # puesto de TI/administración (ADMIN)
+ovs-vsctl set port eth18 tag=50   # puesto de empleado/Soporte (USUARIOS)
 # Puertos libres -> VLAN de aparcamiento 999 (sin gateway)
-for p in eth18 eth10 eth8; do
-  ovs-vsctl --if-exists set port $p tag=999
-done
 # Interfaz de gestión en VLAN 10
 ovs-vsctl --may-exist add-port br0 mgmt tag=10 -- set interface mgmt type=internal
