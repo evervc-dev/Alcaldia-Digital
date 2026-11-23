@@ -140,6 +140,7 @@
 | 17 | Entrar a `mesa.evervc.dev` con `ana.funcionaria` y con `tecnico.soporte` | Ana ve la vista simple (crear/seguir sus tickets); el técnico ve la vista completa con todos los tickets. Ninguno escribe contraseña en GLPI (SSO) | — |
 | 18 | Desde `atacante-ext`: `nmap -Pn -sS -p 22,1433,1521,3306,5432,5900-5905 203.0.113.4` | Suricata alerta («ET SCAN…»); en < 1 min la IP 198.18.0.66 queda **bloqueada 1 h** en las WAN; Zabbix: «IDS detectó un ataque» (alta) → **ticket en GLPI**. Para repetir antes de la hora: `pfctl -t ACC_IDS_BLOQUEO -T flush` en el firewall | bloqueo ≈ 40 s · ticket ≈ 1 min |
 | 19 | En `https://portal.evervc.dev/reportar` enviar un reporte; repetir con `glpi` apagado y luego encenderlo | Folio `R-…` y **ticket P4** (prioridad Baja, categoría «Portal ciudadano») en GLPI. Con GLPI caído: «Pendiente de registro» y se registra solo al volver | ticket inmediato · pendiente < 5 min tras volver |
+| 20 | *Stop* de `portal` y `dc1` 3 min, luego *Start* y `bash scripts/sla-informe.sh` | En Zabbix (*Servicios*) S2 en problema y **S1 OK** (dc2). El informe descuenta los minutos de S2 del margen del mes (4 h 22 min) y sigue «cumple» | — |
 
 Pruebas automáticas equivalentes: `scripts/test-zones.sh` (50 flujos), `scripts/f10-sonda.sh` (mide cortes) y `scripts/lab-check.sh` (estado general).
 
@@ -174,6 +175,7 @@ Pruebas automáticas equivalentes: `scripts/test-zones.sh` (50 flujos), `scripts
   - Lee por SNMP el estado de los túneles y OSPF de los kits.
   - Lee la antigüedad de la réplica (ODBC), la de los respaldos (restic, solo lectura) y la ocupación del NAS.
   - Envía correos de problema y de «RESUELTO».
+  - **SLA mensual** por servicio (S1–S6, objetivos de la Tabla 4 de la Fase 4): informe con `bash scripts/sla-informe.sh` o en *Servicios → Informe de SLA*. S1 solo cuenta como caído si caen dc1 **y** dc2.
   - Desde severidad *Media*, un webhook abre un ticket en GLPI (guarda su n.º como etiqueta del evento), añade seguimientos y lo resuelve al recuperarse.
 - **Mesa de servicio (GLPI):**
   - nginx-dmz pasa el usuario autenticado (Authelia + horario) en `Remote-User`; Apache en `glpi` **descarta esa cabecera** si no viene de nginx-dmz (nadie de la VLAN puede suplantar).

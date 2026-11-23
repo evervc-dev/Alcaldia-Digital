@@ -437,5 +437,52 @@ for m in api("map.get", {"filter": {"name": "Alcaldía Digital"}, "output": ["sy
 api("map.create", {"name": "Alcaldía Digital", "width": 1400, "height": 800, "label_type": 0, "highlight": 1,
                       "expandproblem": 1, "markelements": 1, "show_unack": 0, "selements": els, "links": links, "shapes": shapes})
 
+# ---------- SLA de disponibilidad mensual (Fase 4, Tabla 4; informe mensual §2.3) ----------
+# 1) Etiqueta servicio=Sx SOLO en los disparadores de disponibilidad (servicio caído / inaccesible); los avisos de capacidad
+#    o de respaldo de otros equipos no descuentan disponibilidad. dc1 y dc2 llevan su propia etiqueta: S1 solo cae si caen ambos.
+SVC_HOST = {"dc1": "S1-dc1", "dc2": "S1-dc2", "authelia": "S1", "gate": "S1", "portal": "S2", "portal-db": "S2", "nginx-dmz": "S2",
+            "internet-evervc": "S2", "archivo": "S3", "zbx-web": "S4", "zbx-db": "S4", "mailpit": "S4", "glpi": "S5", "glpi-db": "S5",
+            "nas-a": "S6", "nas-b": "S6", "tareas-programadas": "S6"}
+for t in api("trigger.get", {"hostids": [HOSTS[h] for h in SVC_HOST if h in HOSTS] + [HOSTS[h] for h in ("ts1", "portal-db", "dc1", "archivo", "glpi", "glpi-db", "zbx-db")],
+                             "output": ["triggerid", "description", "templateid"], "selectHosts": ["host"], "selectTags": "extend"}):
+    if t["templateid"] != "0": continue
+    h, d = t["hosts"][0]["host"], t["description"]
+    if "sin respaldo en más de" in d or "FALLÓ" in d: svc = "S6"            # trabajo de respaldo (Tabla 13) -> servicio de respaldos
+    elif ("servicio" in d and "caído" in d) or "inaccesible desde Internet" in d: svc = SVC_HOST.get(h)
+    else: svc = None
+    tags = [x for x in t["tags"] if x["tag"] != "servicio"] + ([{"tag": "servicio", "value": svc}] if svc else [])
+    if tags != t["tags"]: api("trigger.update", {"triggerid": t["triggerid"], "tags": [{"tag": x["tag"], "value": x["value"]} for x in tags]})
+
+def servicio(nombre, algoritmo, problem_tag=None, hijos=(), slo_tag=None, orden=0, desc=""):
+    s = api("service.get", {"filter": {"name": nombre}, "output": ["serviceid"]})
+    p = {"name": nombre, "algorithm": algoritmo, "sortorder": orden, "description": desc,
+         "problem_tags": [{"tag": "servicio", "operator": 0, "value": problem_tag}] if problem_tag else [],
+         "children": [{"serviceid": c} for c in hijos], "tags": [{"tag": "slo", "value": slo_tag}] if slo_tag else []}
+    if s: api("service.update", {"serviceid": s[0]["serviceid"], **p}); return s[0]["serviceid"]
+    return api("service.create", p)["serviceids"][0]
+# algoritmo (API de Zabbix 7): 1 = el más grave SOLO si TODOS los hijos tienen problema (redundancia); 2 = el más grave de los hijos
+d1 = servicio("dc1 (Site A)", 2, "S1-dc1"); d2 = servicio("dc2 (Site B)", 2, "S1-dc2")
+dirs = servicio("S1 · Directorio activo (dc1 o dc2)", 1, hijos=(d1, d2), desc="Basta un DC para autenticar")
+web = servicio("S1 · Autenticación web (Authelia + horario)", 2, "S1")
+SRV = {"S1": servicio("S1 Identidad centralizada", 2, hijos=(dirs, web), slo_tag="S1", orden=1),
+       "S2": servicio("S2 Portal de trámites", 2, "S2", slo_tag="S2", orden=2),
+       "S3": servicio("S3 Archivo digital", 2, "S3", slo_tag="S3", orden=3),
+       "S4": servicio("S4 Monitoreo", 2, "S4", slo_tag="S4", orden=4),
+       "S5": servicio("S5 Mesa de servicio", 2, "S5", slo_tag="S5", orden=5),
+       "S6": servicio("S6 Respaldos", 2, "S6", slo_tag="S6", orden=6)}
+# 2) SLA mensuales: S1, S3 y S5 en horario de las sedes (L-V 07:00-19:00); S2, S4 y S6 24x7. Semana Zabbix: 0 s = domingo 00:00
+LV = [{"period_from": d * 86400 + 7 * 3600, "period_to": d * 86400 + 19 * 3600} for d in range(1, 6)]
+inicio = int(__import__("datetime").datetime(2026, 11, 1, tzinfo=__import__("datetime").timezone(__import__("datetime").timedelta(hours=-6))).timestamp())
+for sid, slo, horario in (("S1", "99.2", LV), ("S2", "99.4", []), ("S3", "96.8", LV), ("S4", "98.9", []), ("S5", "96.8", LV), ("S6", "96.7", [])):
+    nombre = f"SLA {sid} ({slo} % mensual{', L-V 07-19' if horario else ', 24x7'})"
+    p = {"name": nombre, "period": 2, "slo": slo, "effective_date": inicio, "timezone": "America/El_Salvador", "status": 1,
+         "schedule": horario, "service_tags": [{"tag": "slo", "operator": 0, "value": sid}],
+         "description": "Fase 4, Tabla 4: disponibilidad mensual comprometida. Excluye las ventanas de mantenimiento aprobadas (§2.3)."}
+    old = [x for x in api("sla.get", {"output": ["slaid", "name"]}) if x["name"].startswith(f"SLA {sid} ")]
+    if old:
+        api("sla.update", {"slaid": old[0]["slaid"], **p})
+        for x in old[1:]: api("sla.delete", [x["slaid"]])
+    else: api("sla.create", p)
+
 print(f"Zabbix configurado: {len(HOSTS)} hosts, {len(TRIG)} disparadores clave de enlaces/réplica, mapa 'Alcaldía Digital', "
       "alertas -> ti@alcaldia.lab (mailpit)")

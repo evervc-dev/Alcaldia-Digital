@@ -44,3 +44,15 @@ Acceso: **https://monitor.evervc.dev** → Cloudflare Access (solo correos del e
 - Plantillas «ICMP Ping» y «Linux by SNMP» comparten la clave `icmpping` → en los kits solo la de SNMP.
 - La alerta de túnel basada en el propio kit no salta si la sede queda aislada → los túneles a A se comprueban desde el CD.
 - Tras un corte de interfaz, strongSwan tardaba ~3 min en reintentar (backoff) → `retransmit_*` cortos (recupera en ~9 s); el bucle de reinicio de charon ahora recarga las conexiones (`swanctl --load-all`).
+
+## SLA de disponibilidad mensual (Fase 4 Tabla 4 y §2.3) — 22/11/2026
+- **Servicios de Zabbix S1–S6**, alimentados solo por los disparadores de disponibilidad con la etiqueta `servicio=Sx`: servicio caído, portal inaccesible desde Internet, NAS caído y trabajos de respaldo para S6. Los avisos de capacidad no descuentan.
+- **S1 con redundancia:** «Directorio activo (dc1 o dc2)» solo cae si fallan los dos DC (regla *todos los hijos*); «Autenticación web (Authelia + horario)» cuenta aparte.
+- **SLA mensuales:** S1 99,2 %, S3 96,8 % y S5 96,8 % en horario L–V 07:00–19:00; S2 99,4 %, S4 98,9 % y S6 96,7 % en 24×7. Zona horaria America/El_Salvador.
+- **Informe mensual:** `scripts/sla-informe.sh [meses]`. Muestra la caída del mes frente a la permitida (2 h, 4,38 h, 8 h, 8,03 h, 8 h, 24,09 h), la disponibilidad proyectada y si se cumple. En la GUI: *Servicios → Informe de SLA*.
+
+| # | Prueba | Resultado |
+|---|---|---|
+| M7 | *Stop* de `portal` y de `dc1` durante unos 3 min | ✅ S2 en problema; **S1 sigue OK** (dc2 responde). Informe: S2 con 3 min de caída, 99,99 % en el mes, ✔ cumple (margen 4 h 19 min) |
+
+- Gotcha: en la API de Zabbix 7, `algorithm` 1 = «el más grave **si todos** los hijos tienen problema» y 2 = «el más grave de los hijos» (al revés de lo intuitivo).
