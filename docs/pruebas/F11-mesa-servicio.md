@@ -43,3 +43,19 @@
 | G10 | Reporte desde Internet (con `<script>` en el detalle) | ✅ folio `R-20261123-C3EAB9` → **ticket #7**, prioridad 2 (Baja), HTML escapado |
 | G11 | Categoría y hora local | ✅ ticket #8 en «Portal ciudadano: reporte de falla»; consulta con hora de El Salvador |
 | G12 | Reporte con `glpi` apagado y encendido después | ✅ «Pendiente de registro» → **ticket #9** a los 274 s de volver GLPI |
+
+## Catálogo, horario y SLA (Fase 4 Tablas 1, 2 y 6)
+- **Categorías**: S1 Identidad, S2 Portal, S3 Archivo, S4 Monitoreo, S5 Mesa, S6 Respaldos y «Kit de sede y conectividad». Dentro de ellas, las solicitudes estándar de la Tabla 2: alta/baja/rol de cuenta (P4), restablecer contraseña o 2FA (P3), restaurar documento (P3), alta de trámite (P4, cambio normal) y revisión del kit (P3). «Portal ciudadano» va dentro de S2 y «Infraestructura (alerta de Zabbix)» dentro de S4.
+- **Calendario** «Mesa de servicio L-V 07:00-19:00». **SLM** «P1 (guardia 24x7)», sin calendario: el tiempo corre siempre. **SLM** «P2-P4», con el calendario de la mesa.
+- **SLA**: P1 15 min / 4 h · P2 30 min / 8 h · P3 2 h / 24 h · P4 8 h / 72 h (respuesta / resolución).
+- **Reglas de negocio** (RuleTicket, al crear y al modificar): categoría de solicitud estándar → prioridad; prioridad → SLA. El criterio *prioridad* es una lista: solo admite «es», no expresiones regulares, así que hay una regla por valor (6 y 5 = P1, 4 = P2, 3 = P3, 2 y 1 = P4).
+- **Zabbix → prioridad**: severidad Desastre y Alta → P1, Media → P2, Advertencia → P3, Información → P4 (vía urgencia/impacto y la matriz de GLPI). Severidades alineadas con la Tabla 13: servicio caído y Sede aislada = P1; túnel caído, réplica atrasada e IDS = P2; NAS > 80 % y respaldo no hecho = P3.
+- **Hora local**: PHP con `America/El_Salvador`; zonas horarias de GLPI habilitadas (la BD guarda UTC).
+
+| # | Prueba | Resultado |
+|---|---|---|
+| G13 | Solicitud «Restablecimiento de contraseña…» creada el domingo a las 20:31 | ✅ prioridad 3 → SLA P3; vence la respuesta el lunes 09:00 y la resolución el miércoles 07:00 (24 h hábiles) |
+| G14 | Incidente urgencia 5 / impacto 5 | ✅ prioridad 5 → SLA P1 24×7; respuesta a los 15 min, resolución a las 4 h |
+| G15 | Reporte ciudadano desde el portal | ✅ prioridad 2 → SLA P4 (8 h / 72 h hábiles) |
+| G16 | *Stop* de `lam` | ✅ ticket de Zabbix con prioridad 5 → SLA P1 |
+- Problema encontrado: el calendario se calculaba en UTC (PHP del contenedor) → `zz-acc-tz.ini` en la imagen `acc/glpi`.

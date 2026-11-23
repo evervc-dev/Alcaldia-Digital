@@ -175,7 +175,7 @@ hid, _ = servicios("portal-db-b", "10.20.20.22", B, [("PostgreSQL", "tcp", 5432)
 key = 'db.odbc.select[replica_edad,,"Driver=/usr/lib/psqlodbcw.so;Server=10.20.20.22;Port=5432;Database=portal"]'
 item(hid, None, "Antigüedad de la réplica (s)", key, type=11, delay="5m", units="s", username="portal", password=PORTAL_DB_PASS,
      params="SELECT extract(epoch from now() - pg_read_file('replica_ok')::timestamptz)::int")
-TRIG["replica"] = trigger(hid, "portal-db-b: réplica atrasada (> RPO 1 h)", f"last(/portal-db-b/{key})>3900", SEV["high"],
+TRIG["replica"] = trigger(hid, "portal-db-b: réplica atrasada (> RPO 1 h)", f"last(/portal-db-b/{key})>3900", SEV["average"],   # Tabla 13: P2
                           "La última copia correcta desde portal-db tiene más de 65 min: se incumple el RPO de 1 h (Fase 4).")
 trigger(hid, "portal-db-b: no se puede comprobar la réplica", f"nodata(/portal-db-b/{key},15m)=1", SEV["average"])
 servicios("nginx-dmz-b", "10.20.30.10", B, [("HTTP", "http", 80)], "Proxy DMZ del Site B (espera).")
@@ -241,7 +241,7 @@ for eq, lim in (("ts1", 26), ("archivo", 5), ("portal-db", 26), ("dc1", 26), ("g
     desc = f"{eq}: sin respaldo en más de {lim} h"
     for t in api("trigger.get", {"hostids": hid, "search": {"description": "sin respaldo en más de"}, "output": ["triggerid", "description"]}):
         if t["description"] != desc: api("trigger.delete", [t["triggerid"]])   # umbral anterior
-    trigger(hid, desc, f"last(/{eq}/{key})>{lim * 3600}", SEV["high"],
+    trigger(hid, desc, f"last(/{eq}/{key})>{lim * 3600}", SEV["warning"],   # Tabla 13: trabajo de respaldo -> P3
             ("Respaldo cada 4 h (RPO 4 h de la Fase 2)" if lim < 24 else "El respaldo diario (02:00)") +
             " no se ha completado. Ver /var/log/respaldo.log en el equipo.")
     trigger(hid, f"{eq}: no se puede comprobar el respaldo", f"nodata(/{eq}/{key},2h)=1", SEV["average"],
@@ -254,7 +254,7 @@ for fw in ("fw-a1", "fw-a2", "fw-b"):
     item(hid, None, "IDS: IP bloqueadas por respuesta activa", "ids.bloqueadas", type=2, delay="0", value_type=3)
     item(hid, None, "IDS: última alerta", "ids.ultima", type=2, delay="0", value_type=4)
     trigger(hid, f"{fw}: IDS detectó un ataque desde Internet (IP bloqueada 1 h)",
-            f"max(/{fw}/ids.alertas,10m)>0 and length(last(/{fw}/ids.ultima))>0", SEV["high"],
+            f"max(/{fw}/ids.alertas,10m)>0 and length(last(/{fw}/ids.ultima))>0", SEV["average"],   # P2: ataque contenido (IP bloqueada)
             "Suricata (ET Open) alertó en una WAN; el vigía bloqueó la IP de origen 1 h (tabla ACC_IDS_BLOQUEO). "
             "Ver la alerta en Servicios > Detección de intrusiones del firewall.")
     t = api("trigger.get", {"hostids": hid, "filter": {"description": f"{fw}: IDS detectó un ataque desde Internet (IP bloqueada 1 h)"}, "output": ["triggerid"]})
@@ -270,7 +270,7 @@ HOSTS["tareas-programadas"] = hid
 for tarea, nombre, plazo in (("configs", "Respaldo de configuraciones de red", "26h"), ("cinta", "Grabación de cinta (nodo tape)", "8d")):
     key = f"acc.tarea[{tarea}]"
     item(hid, None, f"{nombre}: resultado (1 = OK)", key, type=2, delay="0", value_type=3)
-    trigger(hid, f"{nombre}: FALLÓ", f"last(/tareas-programadas/{key})=0", SEV["high"],
+    trigger(hid, f"{nombre}: FALLÓ", f"last(/tareas-programadas/{key})=0", SEV["warning"],   # Tabla 13: trabajo de respaldo -> P3
             "Ver ~/.local/state/acc/tareas.log en el host. Repetir: scripts/tareas.sh ahora " + tarea)
     trigger(hid, f"{nombre}: no se ejecuta (sin resultado en {plazo})", f"nodata(/tareas-programadas/{key},{plazo})=1",
             SEV["average"], "¿Temporizador instalado? systemctl --user list-timers acc-tareas.timer")
@@ -316,9 +316,12 @@ var H = ['Session-Token: ' + tok], out = {}, tid = p.ticket_id;
 if (!/^[0-9]+$/.test(tid || '')) { tid = ''; }   // sin ticket: la macro llega como *UNKNOWN* o sin resolver
 try {
   if (p.event_value === '1' && p.event_update_status === '0' && !tid) {
-    var u = {'0': 1, '1': 2, '2': 2, '3': 3, '4': 4, '5': 5}[p.severity] || 3;
+    // severidad -> urgencia/impacto -> prioridad GLPI (matriz) -> Fase 4: Desastre/Alta = P1 (5), Media = P2 (4),
+    // Advertencia = P3 (3), Información = P4 (2). Las reglas de GLPI asignan el SLA por prioridad.
+    var u = {'0': 2, '1': 2, '2': 3, '3': 4, '4': 5, '5': 5}[p.severity] || 3;
+    var im = {'0': 2, '1': 2, '2': 3, '3': 4, '4': 4, '5': 5}[p.severity] || 3;
     var yo = req('GET', '/getFullSession', null, H).session.glpiID;   // el ticket se asigna al propio usuario zabbix: así puede resolverlo
-    var t = req('POST', '/Ticket', {input: {name: p.subject, content: html(p.message), type: 1, urgency: u, impact: u,
+    var t = req('POST', '/Ticket', {input: {name: p.subject, content: html(p.message), type: 1, urgency: u, impact: im,
                                              itilcategories_id: parseInt(p.category_id, 10), _users_id_assign: yo}}, H);
     out.tags = {'__zbx_glpi_ticket': String(t.id)};
     Zabbix.log(4, '[GLPI] ticket ' + t.id + ' para el evento ' + p.event_id);

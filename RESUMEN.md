@@ -178,6 +178,7 @@ Pruebas automáticas equivalentes: `scripts/test-zones.sh` (50 flujos), `scripts
 - **Mesa de servicio (GLPI):**
   - nginx-dmz pasa el usuario autenticado (Authelia + horario) en `Remote-User`; Apache en `glpi` **descarta esa cabecera** si no viene de nginx-dmz (nadie de la VLAN puede suplantar).
   - GLPI crea al usuario la primera vez con sus datos del AD (LDAPS a dc1, réplica dc2) y le asigna el perfil por su grupo (reglas).
+  - Catálogo S1–S6 con las solicitudes estándar de la Fase 4; calendario L–V 07:00–19:00; SLA P1 (24×7, 15 min / 4 h) a P4 (8 h / 72 h hábiles) asignados por reglas según la prioridad. Los tickets de Zabbix llevan prioridad según la severidad (Tabla 13).
   - Notificaciones de GLPI por correo a mailpit. Todo se configura con `scripts/glpi-setup.sh` (idempotente).
 - **IDS/IPS:**
   - Suricata 8 en modo IDS escucha WAN1 y WAN2 de fw-a1, fw-a2 y fw-b (reglas ET Open: scan, dos, exploit, attack_response).

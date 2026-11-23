@@ -20,7 +20,7 @@ cfg() { printf "INSERT INTO glpi_configs (context,name,value) VALUES ('core','%s
         ipv4_range_start=INET_ATON('10.10.20.0'), ipv4_range_end=INET_ATON('10.10.20.255') WHERE id=1;"
   cfg enable_api 1; cfg enable_api_login_credentials 1; cfg enable_api_login_external_token 0
   cfg url_base 'https://mesa.evervc.dev'; cfg url_base_api 'https://mesa.evervc.dev/apirest.php'
-  cfg language es_ES; cfg default_language es_ES 2>/dev/null
+  cfg language es_ES; cfg timezone 'America/El_Salvador'   # vista en hora local (la BD guarda UTC)
   cfg ssovariables_id "$(echo "select id from glpi_ssovariables where name='HTTP_REMOTE_USER'" | sql)"
   cfg is_users_auto_add 1; cfg ssologout_url 'https://auth.evervc.dev/logout'
   cfg use_notifications 1; cfg notifications_mailing 1; cfg smtp_mode 1; cfg smtp_host 10.10.20.32; cfg smtp_port 1025
@@ -28,6 +28,7 @@ cfg() { printf "INSERT INTO glpi_configs (context,name,value) VALUES ('core','%s
   cfg from_email 'mesa@alcaldia.lab'; cfg from_email_name 'Mesa de servicio - Alcaldía Digital'; cfg noreply_email 'no-reply@alcaldia.lab'
   echo "UPDATE glpi_users SET password='$HASH', password_last_update=NOW() WHERE name='glpi';"
   echo "UPDATE glpi_users SET is_active=0 WHERE name IN ('tech','normal','post-only');"
+  echo "GRANT SELECT ON mysql.time_zone_name TO 'glpi'@'%';"   # GLPI necesita leer las zonas horarias para mostrar hora local
 } | sql
 echo "SQL: API (solo 10.10.20.0/24), español, URL pública, SSO Remote-User, correo -> mailpit, 'glpi' con contraseña del .env, cuentas de ejemplo desactivadas"
 
@@ -100,12 +101,75 @@ else: pid_ = call("POST", "/User", {"input": {"name": "portal", **dp, "password"
                                                "password2": os.environ["GLPI_PORTAL_PASS"]}})["id"]
 if not any(str(x.get("profiles_id")) == str(PROF["Self-Service"]) for x in call("GET", f"/User/{pid_}/Profile_User") or []):
     call("POST", "/Profile_User", {"input": {"users_id": pid_, "profiles_id": PROF["Self-Service"], "entities_id": 0, "is_recursive": 1}})
-upsert("ITILCategory", {"name": "Portal ciudadano: reporte de falla"}, {"comment": "Reportes de la ciudadanía desde portal.evervc.dev/reportar (P4)",
-                                                                         "is_helpdeskvisible": 1})
 print("API: usuario portal (Self-Service) y categoría «Portal ciudadano: reporte de falla»")
 cat = upsert("ITILCategory", {"name": "Infraestructura (alerta de Zabbix)"}, {"comment": "Tickets abiertos automáticamente por el monitoreo",
                                                                             "is_helpdeskvisible": 0})
 print(f"API: usuario zabbix (Technician), categoría {cat}")
+# ---------- Catálogo (Fase 4 Tablas 1 y 2), horario, SLA (Tabla 6) y reglas ----------
+# Prioridad GLPI (matriz urgencia x impacto) <-> Fase 4: 5 = P1, 4 = P2, 3 = P3, 1-2 = P4
+def categoria(nombre, padre=0, inc=1, req=1, visible=1, comentario=""):
+    c = find("ITILCategory", name=nombre)
+    d = {"itilcategories_id": padre, "is_incident": inc, "is_request": req, "is_helpdeskvisible": visible, "comment": comentario}
+    if c: call("PUT", f"/ITILCategory/{c['id']}", {"input": d}); return c["id"]
+    return call("POST", "/ITILCategory", {"input": {"name": nombre, **d}})["id"]
+CAT = {}
+for sid, nom, resp in (("S1", "Identidad centralizada", "Jefe de Servicios y Aplicaciones"), ("S2", "Portal de trámites", "Jefe de Servicios y Aplicaciones"),
+                       ("S3", "Archivo digital", "Jefe de Servicios y Aplicaciones"), ("S4", "Monitoreo", "Jefe de Soporte y Monitoreo"),
+                       ("S5", "Mesa de servicio", "Jefe de Soporte y Monitoreo"), ("S6", "Respaldos", "Jefe de Continuidad y Respaldos"),
+                       ("SEDE", "Kit de sede y conectividad", "Jefe de Infraestructura y Redes")):
+    CAT[sid] = categoria(f"{sid} {nom}" if sid != "SEDE" else nom, comentario=f"Catálogo de servicios (Fase 4, Tabla 1). Responsable: {resp}")
+SOL = {   # solicitudes estándar (Tabla 2): nombre -> (servicio, prioridad GLPI)
+    "Alta, baja o cambio de rol de una cuenta": ("S1", 2), "Restablecimiento de contraseña o del segundo factor": ("S1", 3),
+    "Restauración de un documento o archivo": ("S3", 3), "Alta de un trámite en el portal (cambio normal, CAB)": ("S2", 2),
+    "Revisión o reemplazo del kit de la sede": ("SEDE", 3)}
+for nom, (sid, _) in SOL.items():
+    CAT[nom] = categoria(nom, CAT[sid], inc=0, req=1, comentario="Solicitud estándar (Fase 4, Tabla 2): cambio preaprobado")
+categoria("Portal ciudadano: reporte de falla", CAT["S2"], inc=1, req=0, comentario="Reportes de la ciudadanía desde portal.evervc.dev/reportar (P4)")
+categoria("Infraestructura (alerta de Zabbix)", CAT["S4"], inc=1, req=0, visible=0, comentario="Tickets abiertos automáticamente por el monitoreo")
+
+cal = find("Calendar", name="Mesa de servicio L-V 07:00-19:00")
+cal = cal["id"] if cal else call("POST", "/Calendar", {"input": {"name": "Mesa de servicio L-V 07:00-19:00", "is_recursive": 1,
+                                                                   "comment": "Horario de la mesa (Fase 1 §3.4, Fase 4 §5)"}})["id"]
+if not (call("GET", f"/Calendar/{cal}/CalendarSegment") or []):
+    for d in range(1, 6):
+        call("POST", "/CalendarSegment", {"input": {"calendars_id": cal, "day": d, "begin": "07:00:00", "end": "19:00:00", "is_recursive": 1}})
+
+def slm(nombre, calendario, comentario):
+    s = find("SLM", name=nombre); d = {"calendars_id": calendario, "is_recursive": 1, "comment": comentario}
+    if s: call("PUT", f"/SLM/{s['id']}", {"input": d}); return s["id"]
+    return call("POST", "/SLM", {"input": {"name": nombre, **d}})["id"]
+SLM_24 = slm("Mesa: P1 (guardia 24x7)", 0, "P1: el tiempo corre siempre; fuera de horario lo atiende la guardia (Fase 4 §2.2 y §5.3)")
+SLM_LV = slm("Mesa: P2-P4 (L-V 07:00-19:00)", cal, "P2 a P4: en el horario de la mesa (Fase 4 Tabla 6)")
+SLA = {}
+for p, s_, (tto, tto_u), (ttr, ttr_u) in (("P1", SLM_24, (15, "minute"), (4, "hour")), ("P2", SLM_LV, (30, "minute"), (8, "hour")),
+                                          ("P3", SLM_LV, (2, "hour"), (24, "hour")), ("P4", SLM_LV, (8, "hour"), (72, "hour"))):
+    for tipo, n, u, et in ((1, tto, tto_u, "respuesta"), (0, ttr, ttr_u, "resolución")):
+        nombre = f"{p} {et} {n} {'min' if u == 'minute' else 'h'}"
+        SLA[(p, tipo)] = upsert("SLA", {"name": nombre}, {"slms_id": s_, "type": tipo, "number_time": n, "definition_time": u,
+                                                          "end_of_working_day": 0, "is_recursive": 1})
+
+def regla(nombre, criterios, acciones, rank, desc):
+    rid = upsert("RuleTicket", {"name": nombre}, {"sub_type": "RuleTicket", "match": "AND", "is_active": 1, "entities_id": 0,
+                                                 "is_recursive": 1, "condition": 3, "ranking": rank, "description": desc})
+    for c in call("GET", f"/RuleTicket/{rid}/RuleCriteria") or []: call("DELETE", f"/RuleCriteria/{c['id']}")
+    for a in call("GET", f"/RuleTicket/{rid}/RuleAction") or []: call("DELETE", f"/RuleAction/{a['id']}")
+    for crit, cond, pat in criterios:
+        call("POST", "/RuleCriteria", {"input": {"rules_id": rid, "criteria": crit, "condition": cond, "pattern": pat}})
+    for campo, val in acciones:
+        call("POST", "/RuleAction", {"input": {"rules_id": rid, "action_type": "assign", "field": campo, "value": val}})
+# 1) prioridad de las solicitudes estándar (antes que las de SLA)
+for k, (nom, (sid, prio)) in enumerate(SOL.items()):
+    regla(f"ACC: prioridad de «{nom}»", [("itilcategories_id", 0, CAT[nom])], [("urgency", prio), ("impact", prio), ("priority", prio)],
+          10 + k, f"Solicitud estándar (Fase 4 Tabla 2): prioridad {'P4' if prio <= 2 else 'P3'}")
+# 2) SLA según la prioridad. El criterio «prioridad» es una lista: solo admite «es» (condición 0), no expresiones
+#    regulares -> una regla por valor (6 y 5 = P1, 4 = P2, 3 = P3, 2 y 1 = P4)
+for viejo in ("ACC: SLA P1", "ACC: SLA P2", "ACC: SLA P3", "ACC: SLA P4"):
+    r = find("RuleTicket", name=viejo)
+    if r: call("DELETE", f"/RuleTicket/{r['id']}")
+for k, (prio, p) in enumerate(((6, "P1"), (5, "P1"), (4, "P2"), (3, "P3"), (2, "P4"), (1, "P4"))):
+    regla(f"ACC: SLA {p} (prioridad {prio})", [("priority", 0, str(prio))], [("slas_id_tto", SLA[(p, 1)]), ("slas_id_ttr", SLA[(p, 0)])],
+          50 + k, f"Fase 4 Tabla 6: tiempos de respuesta y resolución de {p}")
+print(f"API: catálogo S1-S6 + {len(SOL)} solicitudes estándar, calendario L-V 07-19, 8 SLA (P1 24x7) y reglas de prioridad/SLA")
 call("GET", "/killSession")
 open("/tmp/glpi-ldap-id", "w").write(str(ldap))
 PY
@@ -113,5 +177,6 @@ PY
 # ---------- 3) SQL ----------
 LID=$(docker exec "$(C portal)" cat /tmp/glpi-ldap-id)
 { cfg authldaps_id_extra "$LID"; cfg existing_auth_server_field_clean_domain 1; } | sql
+docker exec "$(C glpi)" setpriv --reuid=www-data --regid=www-data --init-groups -- php /var/www/glpi/bin/console database:enable_timezones -n -q >/dev/null 2>&1 || true
 docker exec "$(C glpi)" setpriv --reuid=www-data --regid=www-data --init-groups -- php /var/www/glpi/bin/console cache:clear -q >/dev/null 2>&1 || true
 echo "SSO: datos de usuario desde el directorio AD id=$LID; caché limpiada. Listo: https://mesa.evervc.dev"
