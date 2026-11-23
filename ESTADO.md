@@ -203,3 +203,5 @@ Pruebas formales T1–T13 con evidencias: failover Tier II (ya medido, re-docume
 - Gotchas: no usar `pkill -f gate.py` (mata también el bucle de arranque): `kill $(pidof python3)`. Zabbix usa LDAP; el grupo «Zabbix administrators» sigue con autenticación interna (rescate).
 - **OPNsense con AD** (`opn-ldap.sh`). `backup-configs.sh` tapa `ldap_bindpw` y quita de `configs/` los usuarios que crea el login (datos personales).
 - **MAC duplicada (causa de caídas intermitentes tras encender):** el host podía pisar la MAC de `eth0` con una repetida (mailpit, portal-db y nas-a). `interfaces` fija la de Docker (`02:42…`) en bond0.
+- **Cinta «nas-b no responde» al encender todo (arreglado 23/11):** `cinta.sh` hacía `mc alias set` una sola vez; si la red aún no subía, no se guardaba y fallaba los 10 min. Ahora va dentro del bucle (reproducido con la red caída 30 s: el viejo no se recupera, el nuevo graba a los 32 s). Entra al reabrir el proyecto (imagen `acc/nas`).
+- Authelia envía los códigos por correo real (`SMTP_*` en `.env`); `codigo-mfa.sh` solo sirve con mailpit.
