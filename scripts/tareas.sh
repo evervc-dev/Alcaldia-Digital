@@ -80,5 +80,15 @@ if toca cinta 604800; then
     gns3 POST "/nodes/$NID/stop" '{}' >/dev/null && log "cinta: nodo tape APAGADO (fuera de línea)" || log "cinta: ¡no se pudo apagar tape! apágalo a mano"
     resultado cinta $ok
   fi
+# ---------- 3) air gap: tape encendido por un "Start all" ----------
+# Al arrancar graba un cartucho (válido); en cuanto lo termina se apaga: la cinta debe quedar fuera de línea.
+elif encendido tape; then
+  ini=$(date -d "$(docker inspect -f '{{.State.StartedAt}}' "$(C tape)")" +%s)
+  m=$(docker exec "$(C tape)" stat -c %Y /data/cartuchos/registro.log 2>/dev/null || echo 0)
+  if [ "$m" -ge "$ini" ] || [ $(( $(date +%s) - ini )) -gt 1200 ]; then
+    NID=$(gns3 GET /nodes | python3 -c 'import sys,json;print(next(n["node_id"] for n in json.load(sys.stdin) if n["name"]=="tape"))')
+    linea=$(docker exec "$(C tape)" tail -1 /data/cartuchos/registro.log 2>/dev/null)
+    gns3 POST "/nodes/$NID/stop" '{}' >/dev/null && log "cinta: tape estaba encendido (Start all); cartucho del arranque: ${linea:-ninguno}. APAGADO (fuera de línea)"
+  fi
 fi
 exit 0

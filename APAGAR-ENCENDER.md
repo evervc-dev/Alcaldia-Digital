@@ -26,7 +26,7 @@
 1. Enciende el PC. No hace falta preparar nada del host: módulos, red NAT de libvirt, ufw, busybox y `gns3_server.conf` ya son persistentes.
 2. Abre la GUI de GNS3 → **File → Open project → ACC-Lab**.
 3. **▶ Start all**.
-   - Después **detén** los 4 nodos *en espera* del Site B (`portal-b`, `authelia-b`, `gate-b`, `archivo-b`; solo se encienden en una recuperación ante desastre) y la cinta **`tape`**, que debe estar apagada (solo se enciende para grabar un cartucho).
+   - Después **detén** los 4 nodos *en espera* del Site B (`portal-b`, `authelia-b`, `gate-b`, `archivo-b`; solo se encienden en una recuperación ante desastre) y la cinta **`tape`**, que debe estar apagada (solo se enciende para grabar un cartucho). Si se te olvida, la tarea horaria la apaga sola en cuanto termina el cartucho del arranque (como mucho 1 h).
 4. Espera unos **4 min**. En ese tiempo arrancan los OPNsense, suben los túneles A↔B y de las sedes, Samba, Authelia y Zabbix.
 5. Comprueba el laboratorio:
    ```bash

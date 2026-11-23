@@ -178,3 +178,4 @@ Pruebas formales T1–T13 con evidencias: failover Tier II (ya medido, re-docume
 - La cuenta `zabbix` de GLPI debe tener **solo** Technician como perfil por defecto (si no, la API entra como Self-Service y no puede resolver).
 - `glpi-setup.sh` no cambia contraseñas ya puestas (GLPI rechaza reutilizarlas). Para rotar `GLPI_ZABBIX_PASS`: cambiarla en GLPI, en `.env` y volver a ejecutar `zbx-setup.sh` (macro secreta).
 - GLPI no está en el DR (como Zabbix y LAM): `mesa.evervc.dev` no se mueve al Site B; se restaura desde los respaldos si hiciera falta.
+- **Tras reabrir el proyecto (22/11 noche):** `lab-check` marcaba «Object Lock» en nas-a (el bucket estaba bien: faltaban los alias `a`/`b` de `mc`, que se pierden al recrear el contenedor) y `tape` encendido por *Start all*. Arreglos: el `entrypoint` de `acc/nas` crea los alias al arrancar (imagen reconstruida; entra al reabrir el proyecto) y `tareas.sh` apaga `tape` en cuanto termina el cartucho de su arranque.
