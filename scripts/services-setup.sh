@@ -18,7 +18,7 @@ GATE=gate$SFX; AUTH=authelia$SFX
 LDAPS=$([ "$SITE" = B ] && echo "ldaps://10.20.20.10,ldaps://10.10.20.10" || echo "ldaps://10.10.20.10,ldaps://10.20.20.10")
 put $GATE /etc/acc/horario.conf < config/politicas/horario.conf
 [ "$SITE" = A ] && for n in ts1 puesto-01; do docker inspect "GNS3.$n.$PID" >/dev/null 2>&1 && put $n /var/lib/samba/acc/horario.conf < config/politicas/horario.conf; done
-printf "LDAP_BIND_DN=svc-lectura@ad.alcaldia.lab\nLDAP_BIND_PW=%s\nLDAP_URL=%s\nAUTHELIA_URL=http://%s:9091\n" "$SVC_LDAP_PASS" "$LDAPS" "$([ "$SITE" = B ] && echo 10.20.20.11 || echo 10.10.20.11)" | put $GATE /etc/acc/gate.env
+printf "LDAP_BIND_DN=svc-lectura@ad.alcaldia.lab\nLDAP_BIND_PW=%s\nLDAP_URL=%s\nAUTHELIA_URL=http://%s:9091\nPOLITICA_DN=svc-politica@ad.alcaldia.lab\nPOLITICA_PW=%s\nGLPI_PASS=%s\n" "$SVC_LDAP_PASS" "$LDAPS" "$([ "$SITE" = B ] && echo 10.20.20.11 || echo 10.10.20.11)" "$SVC_POLITICA_PASS" "$GLPI_ACCESOS_PASS" | put $GATE /etc/acc/gate.env
 export LDAP_ADDR="ldaps://$([ "$SITE" = B ] && echo 10.20.20.10 || echo 10.10.20.10):636" PG_ADDR=$DBIP
 if [ "$SITE" = B ]; then export NOTIFIER="  filesystem:
     filename: '/config/notificaciones.txt'"

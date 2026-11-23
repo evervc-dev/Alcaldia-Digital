@@ -472,6 +472,28 @@ for m in api("map.get", {"filter": {"name": "Alcaldía Digital"}, "output": ["sy
 api("map.create", {"name": "Alcaldía Digital", "width": 1400, "height": 800, "label_type": 0, "highlight": 1,
                       "expandproblem": 1, "markelements": 1, "show_unack": 0, "selements": els, "links": links, "shapes": shapes})
 
+# ---------- Usuarios por rol del AD (LDAPS): rol-admin = Super admin, rol-ti = Admin, rol-soporte = lectura. «Admin» local = rescate ----------
+def ugrupo(n, **kw):
+    x = api("usergroup.get", {"filter": {"name": n}, "output": ["usrgrpid"]})
+    if x: api("usergroup.update", {"usrgrpid": x[0]["usrgrpid"], **kw}); return x[0]["usrgrpid"]
+    return api("usergroup.create", {"name": n, **kw})["usrgrpids"][0]
+HG = [{"id": v, "permission": 3} for v in G.values()]; HGR = [{"id": v, "permission": 2} for v in G.values()]
+UG = {"rol-admin": ugrupo("ACC Administradores"), "rol-ti": ugrupo("ACC TI", hostgroup_rights=HG), "rol-soporte": ugrupo("ACC Soporte", hostgroup_rights=HGR)}
+ROL = {r["name"]: r["roleid"] for r in api("role.get", {"output": ["roleid", "name"]})}
+RZ = {"rol-admin": "Super admin role", "rol-ti": "Admin role", "rol-soporte": "User role"}
+BD = "DC=ad,DC=alcaldia,DC=lab"; DIRS = []
+for nom, ip in (("AD dc1", "10.10.20.10"), ("AD dc2", "10.20.20.10")):
+    d = {"name": nom, "idp_type": 1, "host": f"ldaps://{ip}", "port": "636", "base_dn": BD, "search_attribute": "sAMAccountName",
+         "bind_dn": "svc-lectura@ad.alcaldia.lab", "bind_password": os.environ["SVC_LDAP_PASS"], "start_tls": 0, "provision_status": 1,
+         "group_basedn": "", "group_name": "cn", "group_member": "", "group_membership": "memberOf", "user_username": "givenName", "user_lastname": "sn",
+         "provision_groups": [{"name": r, "roleid": ROL[RZ[r]], "user_groups": [{"usrgrpid": UG[r]}]} for r in UG]}
+    x = [y for y in api("userdirectory.get", {"output": ["userdirectoryid", "name"]}) if y["name"] == nom]
+    if x: api("userdirectory.update", {"userdirectoryid": x[0]["userdirectoryid"], **d}); DIRS.append(x[0]["userdirectoryid"])
+    else: DIRS.append(api("userdirectory.create", d)["userdirectoryids"][0])
+DES = ugrupo("ACC sin rol (deshabilitados)", users_status=1)
+ugrupo("Zabbix administrators", gui_access=1)      # la cuenta local Admin (rescate y API) sigue con contraseña interna
+api("authentication.update", {"authentication_type": 1, "ldap_auth_enabled": 1, "ldap_userdirectoryid": DIRS[0], "ldap_case_sensitive": 0, "ldap_jit_status": 1, "disabled_usrgrpid": DES, "jit_provision_interval": "1h"})
+
 # ---------- SLA de disponibilidad mensual (Fase 4, Tabla 4; informe mensual §2.3) ----------
 # 1) Etiqueta servicio=Sx SOLO en los disparadores de disponibilidad (servicio caído / inaccesible); los avisos de capacidad
 #    o de respaldo de otros equipos no descuentan disponibilidad. dc1 y dc2 llevan su propia etiqueta: S1 solo cae si caen ambos.

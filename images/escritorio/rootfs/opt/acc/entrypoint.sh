@@ -8,4 +8,5 @@ if [ -f /var/lib/samba/private/secrets.tdb ]; then winbindd && echo "[acc] winbi
 rm -f /var/run/xrdp/*.pid /run/dbus/pid   # PIDs de un arranque anterior (el contenedor se reutiliza)
 /usr/sbin/xrdp-sesman && /usr/sbin/xrdp && echo "[acc] xrdp escuchando en :3389"
 for d in /etc/acc /var/lib/samba/acc /config/acc /data/.acc; do [ -x $d/respaldo.sh ] && { $d/respaldo.sh bucle & break; }; done   # F9: respaldo diario
+( while true; do python3 /opt/acc/acc-acceso.py agente >> /var/log/acc-acceso.log 2>&1; sleep 5; done ) &   # horarios y excepciones
 exec /bin/bash -l

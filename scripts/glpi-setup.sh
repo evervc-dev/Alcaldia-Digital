@@ -33,7 +33,7 @@ cfg() { printf "INSERT INTO glpi_configs (context,name,value) VALUES ('core','%s
 echo "SQL: API (solo 10.10.20.0/24), español, URL pública, SSO Remote-User, correo -> mailpit, 'glpi' con contraseña del .env, cuentas de ejemplo desactivadas"
 
 # ---------- 2) API ----------
-docker exec -i -e GLPI_ADMIN_PASS -e GLPI_ZABBIX_PASS -e GLPI_PORTAL_PASS -e SVC_LDAP_PASS "$(C portal)" python3 - <<'PY'
+docker exec -i -e GLPI_ADMIN_PASS -e GLPI_ZABBIX_PASS -e GLPI_PORTAL_PASS -e GLPI_ACCESOS_PASS -e SVC_LDAP_PASS "$(C portal)" python3 - <<'PY'
 import base64, json, os, urllib.request, urllib.error
 U = "http://10.10.20.31/apirest.php"
 def call(method, path, body=None, auth=None):
@@ -93,6 +93,15 @@ if not any(str(pu.get("profiles_id")) == str(PROF["Technician"]) for pu in pus):
 for pu in pus:   # GLPI le añade Self-Service al crearlo: la sesión API entraría con él y no podría resolver tickets
     if str(pu.get("profiles_id")) != str(PROF["Technician"]): call("DELETE", f"/Profile_User/{pu['id']}")
 call("PUT", f"/User/{zid}", {"input": {"profiles_id": PROF["Technician"]}})   # perfil por defecto
+# Cuenta "accesos" (gate): ticket P1 por cada acceso de emergencia
+ac = find("User", name="accesos"); da = {"realname": "Accesos de emergencia", "is_active": 1}
+if ac: aid = ac["id"]
+else: aid = call("POST", "/User", {"input": {"name": "accesos", **da, "password": os.environ["GLPI_ACCESOS_PASS"], "password2": os.environ["GLPI_ACCESOS_PASS"]}})["id"]
+apu = call("GET", f"/User/{aid}/Profile_User") or []
+if not any(str(x.get("profiles_id")) == str(PROF["Technician"]) for x in apu): call("POST", "/Profile_User", {"input": {"users_id": aid, "profiles_id": PROF["Technician"], "entities_id": 0, "is_recursive": 1}})
+for x in apu:
+    if str(x.get("profiles_id")) != str(PROF["Technician"]): call("DELETE", f"/Profile_User/{x['id']}")
+call("PUT", f"/User/{aid}", {"input": {"profiles_id": PROF["Technician"]}})
 # Cuenta de servicio del portal (Self-Service): cada reporte ciudadano de /reportar abre un ticket P4 (Fase 4 §2.2)
 pu = find("User", name="portal")
 dp = {"realname": "Portal ciudadano", "firstname": "Reportes", "is_active": 1, "comment": "Cuenta de servicio: el portal abre tickets P4 por la API"}

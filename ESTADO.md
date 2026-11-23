@@ -197,3 +197,7 @@ Pruebas formales T1–T13 con evidencias: failover Tier II (ya medido, re-docume
 - `PROXY_SECRET` (portal) y `ARCHIVO_HEADER_ID` (filebrowser) en `.env`; `services-setup.sh` los entrega a nginx (`conf.d/certs/*-auth.inc`). Cambiar el del archivo exige el nodo DETENIDO y `archivo-setup.sh archivo` (y `archivo-b`).
 - USUARIOS solo tiene DNS/AD/RDP hacia servidores. El IDS solo bloquea escaneos/exploits/DoS contra las WAN y nunca a Cloudflare.
 - No escribir horas con cero delante en aritmética de shell (`08` = octal inválido).
+
+## 23/11: roles (4 niveles) y accesos de emergencia — ver docs/ROLES-Y-ACCESOS.md
+- `horario.conf` ya NO manda: la política está en el AD y se edita en `lam.evervc.dev/accesos`.
+- Gotchas: no usar `pkill -f gate.py` (mata también el bucle de arranque): `kill $(pidof python3)`. Zabbix usa LDAP; el grupo «Zabbix administrators» sigue con autenticación interna (rescate).

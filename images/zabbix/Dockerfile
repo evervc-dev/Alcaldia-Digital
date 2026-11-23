@@ -8,6 +8,8 @@ USER root
 RUN apk add --no-cache su-exec bash psqlodbc   # psqlodbc: comprobación de la réplica (RPO) por ODBC
 ENV ACC_CMD=${ACC_CMD}
 COPY rootfs/ /
+# LDAPS al AD con la CA del laboratorio (login por roles)
+RUN printf 'TLS_CACERT /etc/ssl/acc-ca.crt\nTLS_REQCERT demand\n' > /etc/openldap/ldap.conf 2>/dev/null || true
 # F9: restic (binario estático oficial) para los respaldos
 COPY --from=restic/restic:0.17.3 /usr/bin/restic /usr/local/bin/restic
 RUN chmod +x /opt/acc/entrypoint.sh

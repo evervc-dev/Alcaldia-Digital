@@ -33,18 +33,21 @@ access_control:
     - domain: 'portal.evervc.dev'
       resources: ['^/funcionarios([/?].*)?$']
       policy: two_factor
-      subject: [['group:funcionarios'], ['group:acceso-24h']]
+      subject: [['group:funcionarios'], ['group:acceso-24h'], ['group:rol-admin'], ['group:rol-ti'], ['group:rol-soporte']]
     - domain: 'portal.evervc.dev'
       policy: bypass
     - domain: 'lam.evervc.dev'          # gestión de identidades: solo TI (PLAN §12), accesible solo por WARP
       policy: two_factor
-      subject: [['group:gestores-identidad'], ['group:Domain Admins']]
+      subject: [['group:gestores-identidad'], ['group:Domain Admins'], ['group:rol-admin'], ['group:rol-ti'], ['group:rol-soporte']]
     - domain: 'archivo.evervc.dev'
       policy: two_factor
-      subject: [['group:funcionarios'], ['group:acceso-24h']]
+      subject: [['group:funcionarios'], ['group:acceso-24h'], ['group:rol-admin'], ['group:rol-ti'], ['group:rol-soporte']]
+    - domain: 'monitor.evervc.dev'       # Zabbix: además de Cloudflare Access; perfil según el rol (zbx-setup.py)
+      policy: two_factor
+      subject: [['group:rol-admin'], ['group:rol-ti'], ['group:rol-soporte']]
     - domain: 'mesa.evervc.dev'          # mesa de servicio (GLPI): todo el personal abre tickets; perfil según grupo del AD
       policy: two_factor
-      subject: [['group:funcionarios'], ['group:acceso-24h'], ['group:mesa-tecnicos'], ['group:mesa-admins']]
+      subject: [['group:funcionarios'], ['group:acceso-24h'], ['group:mesa-tecnicos'], ['group:mesa-admins'], ['group:rol-admin'], ['group:rol-ti'], ['group:rol-soporte']]
 session:
   secret: '${AUTHELIA_SESSION_SECRET}'
   cookies:

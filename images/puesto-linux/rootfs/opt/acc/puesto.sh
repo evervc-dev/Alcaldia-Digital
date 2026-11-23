@@ -20,4 +20,5 @@ EOC
   ( while true; do lightdm >> /var/log/lightdm-acc.log 2>&1; sleep 5; done ) &
   echo "[acc] LightDM en el display $DISPLAY"
 fi
+( while true; do python3 /opt/acc/acc-acceso.py agente >> /var/log/acc-acceso.log 2>&1; sleep 5; done ) &   # horarios y excepciones
 exec /bin/bash -l

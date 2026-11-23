@@ -29,3 +29,5 @@ fill GLPI_ZABBIX_PASS "Zbx-$(rnd 20)-8t"     # usuario GLPI "zabbix" (API): Zabb
 fill GLPI_PORTAL_PASS "Prt-$(rnd 20)-6v"   # usuario GLPI "portal" (API): reportes ciudadanos -> tickets P4
 fill PROXY_SECRET "$(rnd 40)"               # nginx-dmz -> portal: sin él se ignora Remote-User (no se puede suplantar desde la red interna)
 fill ARCHIVO_HEADER_ID "$(openssl rand -hex 16)"   # nombre aleatorio de la cabecera de usuario de filebrowser (solo lo conoce nginx)
+fill SVC_POLITICA_PASS "Pol-$(rnd 18)-2n"          # cuenta AD de gate: escribe SOLO en OU=Politica-Acceso (horarios y excepciones)
+fill GLPI_ACCESOS_PASS "Acs-$(rnd 20)-4h"          # usuario GLPI "accesos": ticket P1 por cada acceso de emergencia
