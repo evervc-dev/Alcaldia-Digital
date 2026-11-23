@@ -22,6 +22,14 @@ printf "LDAP_BIND_DN=svc-lectura@ad.alcaldia.lab\nLDAP_BIND_PW=%s\nLDAP_URL=%s\n
 export LDAP_ADDR="ldaps://$([ "$SITE" = B ] && echo 10.20.20.10 || echo 10.10.20.10):636" PG_ADDR=$DBIP
 if [ "$SITE" = B ]; then export NOTIFIER="  filesystem:
     filename: '/config/notificaciones.txt'"
+elif [ -n "${SMTP_USER:-}" ] && [ -n "${SMTP_PASS:-}" ]; then   # correo REAL (códigos del MFA); sin estas variables: mailpit
+  export NOTIFIER="  disable_startup_check: true
+  smtp:
+    address: 'submission://${SMTP_HOST:-smtp.gmail.com}:${SMTP_PORT:-587}'
+    username: '$SMTP_USER'
+    password: '$SMTP_PASS'
+    sender: 'Alcaldia Digital <$SMTP_USER>'
+    subject: '[Alcaldia Digital] {title}'"
 else export NOTIFIER="  smtp:
     address: 'smtp://10.10.20.32:1025'
     sender: 'Alcaldia Digital <no-reply@evervc.dev>'
